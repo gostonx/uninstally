@@ -54,6 +54,10 @@ with SwiftUI and Apple's native frameworks (no Electron, no web tech).
 - **Accessory app** — no Dock icon, no menu-bar item. It appears only when opened
   directly or from Finder, and quits automatically after a Finder-initiated
   uninstall.
+- **Automatic, secure updates** — powered by [Sparkle](https://sparkle-project.org)
+  with EdDSA-signed releases delivered through a signed appcast at
+  `https://codenta.us/appcast.xml`. Checks on launch and every 24 hours, with
+  stable/beta/nightly channels. See [docs/UPDATES.md](docs/UPDATES.md).
 
 ---
 
@@ -142,6 +146,19 @@ outside the App Sandbox. Grant **Full Disk Access** (System Settings → Privacy
 Security) for the deepest scans.
 
 ---
+
+## Releasing & updates
+
+Releases are fully automated. Push a version tag and GitHub Actions builds, signs,
+notarizes, and publishes everything:
+
+```sh
+git tag v1.4.0 && git push origin v1.4.0
+```
+
+- [docs/RELEASING.md](docs/RELEASING.md) — the release flow and channels
+- [docs/UPDATES.md](docs/UPDATES.md) — Sparkle, appcast, key rotation/revocation
+- [docs/SECRETS.md](docs/SECRETS.md) — required GitHub Actions secrets
 
 ## Architecture
 
