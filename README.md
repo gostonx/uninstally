@@ -21,6 +21,7 @@ with SwiftUI and Apple's native frameworks (no Electron, no web tech).
 <p align="center">
   <a href="https://codenta.us/"><b>Website</b></a> ·
   <a href="https://github.com/gostonx/uninstally/releases/latest"><b>Download</b></a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
   <a href="https://codenta.us/">More from Codenta</a>
 </p>
 
