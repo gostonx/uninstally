@@ -4,6 +4,23 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.3.0] — 2026-07-08
+
+### Changed
+- **Settings is now a single, continuous page** (like Apple's System Settings)
+  instead of separate panes. The sidebar is used purely for navigation:
+  selecting a section smoothly scrolls to it and highlights it, and scrolling
+  updates the highlight in return.
+
+### Added
+- **Customizable navigation sidebar.** Reorder sections by drag-and-drop, show or
+  hide them, and restore the default layout from the new **Customize Sidebar**
+  card. Hiding a section only removes it from the sidebar — it still appears on
+  the page. The layout persists across launches.
+- New sections: **Uninstall Settings**, **Scanning** and **Security**, alongside
+  General, Updates, Appearance, Advanced and About.
+- Subtle haptic feedback when crossing section boundaries while scrolling.
+
 ## [1.2.0] — 2026-07-08
 
 ### Added
@@ -38,6 +55,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.3.0]: https://github.com/gostonx/uninstally/releases/tag/v1.3.0
 [1.2.0]: https://github.com/gostonx/uninstally/releases/tag/v1.2.0
 [1.1.0]: https://github.com/gostonx/uninstally/releases/tag/v1.1.0
 [1.0.0]: https://github.com/gostonx/uninstally/releases/tag/v1.0.0

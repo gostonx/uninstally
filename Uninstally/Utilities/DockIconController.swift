@@ -10,9 +10,28 @@ enum AppSettings {
     /// Whether subtle trackpad haptic feedback is enabled. Defaults to `true`.
     static let hapticsEnabledKey = "hapticsEnabled"
 
-    /// JSON-encoded array of `SettingsTabConfig` describing the Settings tab
-    /// order, custom names and enabled state.
-    static let settingsTabsKey = "settingsTabsConfiguration"
+    /// JSON-encoded array of `SidebarItemConfig` describing the Settings sidebar
+    /// order and visibility.
+    static let settingsSidebarKey = "settingsSidebarConfiguration"
+
+    // MARK: Uninstall
+
+    /// Move removed user files to the Trash (recoverable) rather than deleting.
+    static let uninstallMoveToTrashKey = "uninstallMoveToTrash"
+    /// Quit automatically after a Finder-initiated uninstall completes.
+    static let quitAfterFinderKey = "quitAfterFinderUninstall"
+
+    // MARK: Scanning
+
+    /// Include system-level `/Library` locations when scanning (needs admin to remove).
+    static let scanSystemLevelKey = "scanIncludeSystemLevel"
+    /// Automatically scan for leftover files in the background.
+    static let autoScanLeftoversKey = "autoScanLeftovers"
+
+    // MARK: Security
+
+    /// Always require an explicit confirmation before deleting.
+    static let requireConfirmationKey = "requireDeleteConfirmation"
 }
 
 /// Applies the Dock-icon preference by switching the process activation policy.

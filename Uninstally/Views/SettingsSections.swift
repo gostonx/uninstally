@@ -1,111 +1,255 @@
 import SwiftUI
 
-// MARK: - General
+// MARK: - Section card shell
 
-/// General preferences, including the haptic-feedback toggle.
-struct GeneralSettingsView: View {
-    @AppStorage(AppSettings.hapticsEnabledKey) private var hapticsEnabled = true
+/// A single section on the Settings page: a header (icon badge, title, subtitle)
+/// followed by the section's content in a translucent rounded card.
+struct SettingsSectionCard: View {
+    let section: SettingsSection
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(isOn: $hapticsEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Enable Haptic Feedback")
-                        Text("Subtle trackpad feedback when selecting items, changing sections and reaching the edge of a list. Has no effect on hardware without a Force Touch trackpad.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
-                .accessibilityHint("Turns trackpad haptic feedback on or off")
-                .onChange(of: hapticsEnabled) { _, isOn in
-                    if isOn { HapticManager.shared.itemSelected() }
-                }
-            } header: {
-                Text("Feedback")
+        VStack(alignment: .leading, spacing: 12) {
+            header
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill((section.accentsRed ? Color.red : Color.accentColor).gradient)
+                .frame(width: 32, height: 32)
+                .overlay(
+                    Image(systemName: section.systemImage)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(section.title)
+                    .font(.title2.weight(.bold))
+                Text(section.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
-        .formStyle(.grouped)
-        .navigationTitle("General")
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch section {
+        case .general: GeneralContent()
+        case .updates: UpdatesContent()
+        case .appearance: AppearanceContent()
+        case .uninstall: UninstallContent()
+        case .scanning: ScanningContent()
+        case .security: SecurityContent()
+        case .advanced: AdvancedContent()
+        case .about: AboutContent()
+        }
+    }
+}
+
+// MARK: - Reusable rows
+
+/// A full-width toggle row with an optional subtitle, styled for the settings card.
+struct SettingsToggleRow: View {
+    let title: String
+    var subtitle: String?
+    @Binding var isOn: Bool
+    var disabled = false
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                if let subtitle {
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .disabled(disabled)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn ? "On" : "Off")
+    }
+}
+
+/// A card container that stacks rows with hairline dividers.
+struct SettingsCard<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        GlassCard(cornerRadius: 12, padding: 0) {
+            VStack(spacing: 0) { content }
+        }
+    }
+}
+
+private struct RowDivider: View {
+    var body: some View { Divider().padding(.leading, 14) }
+}
+
+// MARK: - General
+
+private struct GeneralContent: View {
+    @AppStorage(AppSettings.hapticsEnabledKey) private var haptics = true
+
+    var body: some View {
+        SettingsCard {
+            SettingsToggleRow(
+                title: "Haptic Feedback",
+                subtitle: "Subtle trackpad feedback for selections, section changes, list edges and reordering. No effect without a Force Touch trackpad.",
+                isOn: $haptics
+            )
+            .onChange(of: haptics) { _, on in if on { HapticManager.shared.itemSelected() } }
+        }
     }
 }
 
 // MARK: - Appearance
 
-/// Appearance preferences: Dock-icon visibility.
-struct AppearanceSettingsView: View {
+private struct AppearanceContent: View {
     @AppStorage(AppSettings.showDockIconKey) private var showDockIcon = false
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(isOn: $showDockIcon) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Show icon in Dock")
-                        Text("When off, Uninstally runs as a lightweight accessory with no Dock or menu-bar presence.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .toggleStyle(.switch)
-                .accessibilityHint("Shows or hides the Uninstally icon in the Dock")
-            } header: {
-                Text("Dock")
+        SettingsCard {
+            SettingsToggleRow(
+                title: "Show icon in Dock",
+                subtitle: "When off, Uninstally runs as a lightweight accessory with no Dock or menu-bar presence.",
+                isOn: $showDockIcon
+            )
+            .onChange(of: showDockIcon) { _, newValue in
+                DockIconController.apply(showDockIcon: newValue)
             }
         }
-        .formStyle(.grouped)
-        .navigationTitle("Appearance")
-        .onChange(of: showDockIcon) { _, newValue in
-            DockIconController.apply(showDockIcon: newValue)
+    }
+}
+
+// MARK: - Uninstall Settings
+
+private struct UninstallContent: View {
+    @AppStorage(AppSettings.uninstallMoveToTrashKey) private var moveToTrash = true
+    @AppStorage(AppSettings.quitAfterFinderKey) private var quitAfterFinder = true
+
+    var body: some View {
+        SettingsCard {
+            SettingsToggleRow(
+                title: "Move removed files to the Trash",
+                subtitle: "User-level files are recoverable from the Trash. System files always require administrator approval.",
+                isOn: $moveToTrash
+            )
+            RowDivider()
+            SettingsToggleRow(
+                title: "Quit after a Finder uninstall",
+                subtitle: "Automatically close Uninstally once a right-click uninstall finishes.",
+                isOn: $quitAfterFinder
+            )
+        }
+    }
+}
+
+// MARK: - Scanning
+
+private struct ScanningContent: View {
+    @AppStorage(AppSettings.scanSystemLevelKey) private var scanSystem = true
+    @AppStorage(AppSettings.autoScanLeftoversKey) private var autoScan = true
+
+    var body: some View {
+        SettingsCard {
+            SettingsToggleRow(
+                title: "Include system-level files",
+                subtitle: "Also search /Library locations. Removing these requires an administrator password.",
+                isOn: $scanSystem
+            )
+            RowDivider()
+            SettingsToggleRow(
+                title: "Scan for leftovers automatically",
+                subtitle: "Look for orphaned files from removed apps in the background.",
+                isOn: $autoScan
+            )
+        }
+    }
+}
+
+// MARK: - Security
+
+private struct SecurityContent: View {
+    @AppStorage(AppSettings.requireConfirmationKey) private var requireConfirmation = true
+
+    var body: some View {
+        SettingsCard {
+            SettingsToggleRow(
+                title: "Require confirmation before deleting",
+                subtitle: "Always show a summary and warning before anything is removed.",
+                isOn: $requireConfirmation
+            )
+            RowDivider()
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.shield.fill")
+                    .foregroundStyle(.green)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Verified update source")
+                    Text("Updates are only downloaded from the official Uninstally repository on GitHub and verified before installation.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .accessibilityElement(children: .combine)
         }
     }
 }
 
 // MARK: - Advanced
 
-/// Advanced preferences: restore the Settings customisation.
-struct AdvancedSettingsView: View {
-    @Environment(TabManager.self) private var tabManager
+private struct AdvancedContent: View {
+    @Environment(SidebarManager.self) private var sidebar
     @State private var didReset = false
 
     var body: some View {
-        Form {
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Reset Settings Layout")
-                        Text("Restore the default tab order, names and visibility.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button("Reset") {
-                        tabManager.reset()
-                        withAnimation { didReset = true }
-                    }
+        SettingsCard {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Reset Sidebar Layout")
+                    Text("Restore the default section order and visibility.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                if didReset {
-                    Label("Settings layout restored to defaults.", systemImage: "checkmark.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                        .transition(.opacity)
+                Spacer(minLength: 8)
+                Button("Reset") {
+                    sidebar.reset()
+                    withAnimation { didReset = true }
                 }
-            } header: {
-                Text("Customization")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
+            if didReset {
+                RowDivider()
+                Label("Sidebar restored to defaults.", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .transition(.opacity)
             }
         }
-        .formStyle(.grouped)
-        .navigationTitle("Advanced")
     }
 }
 
 // MARK: - Updates
 
-/// A lightweight update check against the official GitHub repository. Uses the
-/// shared `GitHubRelease` / `SemanticVersion` models; heavier download/install
-/// logic lives in the dedicated update pipeline.
-struct UpdatesSettingsView: View {
+private struct UpdatesContent: View {
     private enum Status: Equatable {
         case idle, checking, upToDate, available(String, URL), failed(String)
     }
@@ -113,7 +257,7 @@ struct UpdatesSettingsView: View {
     @State private var status: Status = .idle
     @State private var lastChecked: Date?
 
-    private static let repoAPI = URL(string: "https://api.github.com/repos/gostonx/uninstally/releases/latest")!
+    private static let api = URL(string: "https://api.github.com/repos/gostonx/uninstally/releases/latest")!
     private static let releasesPage = URL(string: "https://github.com/gostonx/uninstally/releases/latest")!
 
     private var currentVersion: String {
@@ -121,18 +265,20 @@ struct UpdatesSettingsView: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                LabeledContent("Current Version", value: currentVersion)
-                statusRow
-                if let lastChecked {
-                    LabeledContent("Last Checked", value: lastChecked.formatted(date: .abbreviated, time: .shortened))
-                }
-            } header: {
-                Text("Software Update")
+        SettingsCard {
+            infoRow(title: "Current Version", trailing: Text(currentVersion).foregroundStyle(.secondary))
+            RowDivider()
+            infoRow(title: "Status", trailing: statusView)
+            if let lastChecked {
+                RowDivider()
+                infoRow(
+                    title: "Last Checked",
+                    trailing: Text(lastChecked.formatted(date: .abbreviated, time: .shortened))
+                        .foregroundStyle(.secondary)
+                )
             }
-
-            Section {
+            RowDivider()
+            HStack(spacing: 10) {
                 Button {
                     Task { await check() }
                 } label: {
@@ -140,39 +286,41 @@ struct UpdatesSettingsView: View {
                 }
                 .disabled(status == .checking)
                 Link(destination: Self.releasesPage) {
-                    Label("View Releases on GitHub", systemImage: "arrow.up.right.square")
+                    Label("Releases", systemImage: "arrow.up.right.square")
                 }
+                Spacer()
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
-        .formStyle(.grouped)
-        .navigationTitle("Updates")
+    }
+
+    private func infoRow(title: String, trailing: some View) -> some View {
+        HStack {
+            Text(title)
+            Spacer(minLength: 8)
+            trailing
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
-    private var statusRow: some View {
+    private var statusView: some View {
         switch status {
         case .idle:
-            LabeledContent("Status", value: "Not checked yet")
+            Text("Not checked yet").foregroundStyle(.secondary)
         case .checking:
-            LabeledContent("Status") {
-                HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Checking…") }
-            }
+            HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Checking…") }
         case .upToDate:
-            LabeledContent("Status") {
-                Label("You're up to date", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            }
+            Label("You're up to date", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
         case .available(let version, let url):
-            LabeledContent("Status") {
-                Link(destination: url) {
-                    Label("Update available: \(version)", systemImage: "arrow.down.circle.fill")
-                }
+            Link(destination: url) {
+                Label("Update available: \(version)", systemImage: "arrow.down.circle.fill")
             }
         case .failed(let message):
-            LabeledContent("Status") {
-                Label(message, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-            }
+            Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
         }
     }
 
@@ -180,21 +328,19 @@ struct UpdatesSettingsView: View {
         status = .checking
         defer { lastChecked = Date() }
         do {
-            var request = URLRequest(url: Self.repoAPI)
+            var request = URLRequest(url: Self.api)
             request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
             request.setValue("Uninstally", forHTTPHeaderField: "User-Agent")
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                status = .failed("Couldn't reach GitHub")
-                return
+                status = .failed("Couldn't reach GitHub"); return
             }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let release = try decoder.decode(GitHubRelease.self, from: data)
             guard let latest = SemanticVersion(release.tagName),
                   let current = SemanticVersion(currentVersion) else {
-                status = .failed("Couldn't read version")
-                return
+                status = .failed("Couldn't read version"); return
             }
             if latest > current {
                 status = .available(release.tagName, release.htmlURL)
@@ -210,8 +356,7 @@ struct UpdatesSettingsView: View {
 
 // MARK: - About
 
-/// About screen with the app identity and Codenta links.
-struct AboutSettingsView: View {
+private struct AboutContent: View {
     private var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
@@ -219,39 +364,31 @@ struct AboutSettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .frame(width: 96, height: 96)
-                .accessibilityHidden(true)
-            Text("uninstally")
-                .font(.system(.title, design: .rounded).weight(.bold))
-            Text(version)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Text("A native macOS uninstaller by Codenta.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            HStack(spacing: 12) {
-                Link(destination: URL(string: "https://codenta.us/")!) {
-                    Label("Website", systemImage: "safari")
+        SettingsCard {
+            VStack(spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 84, height: 84)
+                    .accessibilityHidden(true)
+                Text("uninstally")
+                    .font(.system(.title2, design: .rounded).weight(.bold))
+                Text(version).font(.callout).foregroundStyle(.secondary)
+                Text("A native macOS uninstaller by Codenta.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                HStack(spacing: 12) {
+                    Link(destination: URL(string: "https://codenta.us/")!) {
+                        Label("Website", systemImage: "safari")
+                    }
+                    Link(destination: URL(string: "https://github.com/gostonx/uninstally")!) {
+                        Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+                    }
                 }
-                Link(destination: URL(string: "https://github.com/gostonx/uninstally")!) {
-                    Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
-                }
+                .buttonStyle(.bordered)
+                .padding(.top, 2)
             }
-            .buttonStyle(.bordered)
-            .padding(.top, 4)
-
-            Spacer()
-            Text("© 2026 Codenta")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity)
+            .padding(24)
         }
-        .frame(maxWidth: .infinity)
-        .padding(32)
-        .navigationTitle("About")
     }
 }
