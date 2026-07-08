@@ -7,7 +7,7 @@ the only secrets you need are:
 | Secret | Purpose |
 |--------|---------|
 | `SPARKLE_PRIVATE_KEY` | The EdDSA private key produced by Sparkle's `generate_keys` (base64 string). This signs each release; the app verifies it against `SUPublicEDKey`. |
-| `SITE_REPO_TOKEN` | A fine-grained PAT with **Contents: Read and write** on `gostonx/codenta-site`. Used to deploy the regenerated `appcast.xml` + updated download links (Cloudflare Pages then builds automatically). |
+| `SSH_DEPLOY_KEY` | The SSH private key of a **write deploy key** on `gostonx/codenta-site`. Used to deploy the regenerated `appcast.xml` + updated download links (Cloudflare Pages then builds automatically). |
 
 Add them under **Settings → Secrets and variables → Actions → New repository
 secret** in `gostonx/uninstally`.
@@ -40,13 +40,23 @@ Generate the EdDSA key pair **once** (this is free and requires no Apple account
 CI are a matched pair — if they don't match, Sparkle rejects every update
 (fail-closed). See `docs/UPDATES.md` for rotation and revocation.
 
-## `SITE_REPO_TOKEN`
+## `SSH_DEPLOY_KEY`
 
-Create a **fine-grained personal access token**
-(https://github.com/settings/tokens) scoped to `gostonx/codenta-site` with
-**Contents: Read and write**. The release job commits the regenerated
-`appcast.xml` and updated download links, which triggers the Cloudflare Pages
-deploy of `https://codenta.us`.
+An SSH key pair whose **public** half is registered as a *write* **deploy key** on
+`gostonx/codenta-site`, and whose **private** half is this secret. The release job
+checks out the site repo over SSH and pushes the regenerated `appcast.xml` +
+updated download links, which triggers the Cloudflare Pages deploy of
+`https://codenta.us`.
+
+To rotate it:
+
+```sh
+ssh-keygen -t ed25519 -N "" -C "uninstally-release-deploy" -f deploy
+gh api -X POST repos/gostonx/codenta-site/keys -f title="uninstally-release-deploy" \
+  -f key="$(cat deploy.pub)" -F read_only=false
+gh secret set SSH_DEPLOY_KEY -R gostonx/uninstally < deploy
+rm deploy deploy.pub
+```
 
 ### Optional: direct Cloudflare deploy
 

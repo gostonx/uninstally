@@ -18,7 +18,7 @@ name: Release
 #
 # Required repository secrets (see docs/SECRETS.md):
 #   SPARKLE_PRIVATE_KEY  - EdDSA private key from Sparkle's generate_keys
-#   SITE_REPO_TOKEN      - PAT with contents:write on gostonx/codenta-site
+#   SSH_DEPLOY_KEY       - SSH private key of a write deploy key on gostonx/codenta-site
 
 on:
   push:
@@ -183,7 +183,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ env.SITE_REPO }}
-          token: ${{ secrets.SITE_REPO_TOKEN }}
+          ssh-key: ${{ secrets.SSH_DEPLOY_KEY }}
           path: site
 
       - name: Regenerate appcast + sync website
