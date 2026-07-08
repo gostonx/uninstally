@@ -1,6 +1,6 @@
 # Uninstally
 
-A native macOS uninstaller by **Codenta** — the simplest, cleanest way to
+A native macOS uninstaller by **Codenta**: the simplest, cleanest way to
 completely remove applications and every file they leave behind. Built entirely
 with SwiftUI and Apple's native frameworks (no Electron, no web tech).
 
