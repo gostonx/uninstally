@@ -1,5 +1,10 @@
 # Uninstally
 
+<p align="center">
+  <img src="docs/finder-menu.png" alt="Uninstall with Uninstally in the Finder right-click menu" width="49%" />
+  <img src="docs/uninstall-window.png" alt="Uninstally uninstall confirmation window showing removable files" width="49%" />
+</p>
+
 A native macOS uninstaller by **Codenta**: the simplest, cleanest way to
 completely remove applications and every file they leave behind. Built entirely
 with SwiftUI and Apple's native frameworks (no Electron, no web tech).
