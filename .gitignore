@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+
+# Xcode user/workspace settings
+*.xcworkspace/xcuserdata/
+Uninstally.xcodeproj/project.xcworkspace/xcuserdata/
+Uninstally.xcodeproj/xcuserdata/
