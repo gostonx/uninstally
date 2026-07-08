@@ -67,7 +67,7 @@
 	<key>SUFeedURL</key>
 	<string>https://codenta.us/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>AuHi+VLERr/E2Pg1n1ywW3/AZdIedANGkudesekGXDc=</string>
+	<string>Q06fCE+G3Xcq02Am0zgWe/dYiXLVYPZ5NamVjbWG1pE=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
 </dict>
