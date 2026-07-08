@@ -1,33 +1,61 @@
 import SwiftUI
 
-/// The app's preferences window (⌘, or the gear in the browser). Currently hosts
-/// the Dock-icon visibility toggle; structured as a `Form` so future settings drop
-/// in cleanly.
+/// Sidebar routes in the Settings window: one per enabled section, plus the
+/// customisation screen.
+private enum SettingsRoute: Hashable {
+    case section(SettingsSection)
+    case customize
+}
+
+/// The app's preferences window. A source-list sidebar lists the user's enabled
+/// tabs in their chosen order, followed by a "Customize Settings…" entry. Tab
+/// order, names and visibility are owned by `TabManager` and persist across
+/// launches.
 struct SettingsView: View {
-    @AppStorage(AppSettings.showDockIconKey) private var showDockIcon = false
+    @Environment(TabManager.self) private var tabManager
+    @State private var selection: SettingsRoute?
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(isOn: $showDockIcon) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Show icon in Dock")
-                        Text("When off, Uninstally runs as a lightweight accessory with no Dock or menu-bar presence.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        NavigationSplitView {
+            List(selection: $selection) {
+                Section("Settings") {
+                    ForEach(tabManager.enabledTabs) { tab in
+                        Label(tab.title, systemImage: tab.section.systemImage)
+                            .tag(SettingsRoute.section(tab.section))
                     }
                 }
-                .toggleStyle(.switch)
-                .accessibilityHint("Shows or hides the Uninstally icon in the Dock")
-            } header: {
-                Text("Appearance")
+                Section {
+                    Label("Customize Settings…", systemImage: "slider.horizontal.3")
+                        .tag(SettingsRoute.customize)
+                }
+            }
+            .navigationSplitViewColumnWidth(210)
+        } detail: {
+            detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 720, height: 480)
+        .onAppear {
+            if selection == nil {
+                selection = tabManager.enabledTabs.first.map { .section($0.section) } ?? .customize
             }
         }
-        .formStyle(.grouped)
-        .frame(width: 420)
-        .fixedSize(horizontal: false, vertical: true)
-        .onChange(of: showDockIcon) { _, newValue in
-            DockIconController.apply(showDockIcon: newValue)
+        .onChange(of: selection) { _, _ in
+            HapticManager.shared.sectionChanged()
+        }
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch selection {
+        case .section(.general): GeneralSettingsView()
+        case .section(.updates): UpdatesSettingsView()
+        case .section(.appearance): AppearanceSettingsView()
+        case .section(.advanced): AdvancedSettingsView()
+        case .section(.about): AboutSettingsView()
+        case .customize: CustomizeSettingsView()
+        case nil:
+            ContentUnavailableView("Settings", systemImage: "gearshape")
         }
     }
 }

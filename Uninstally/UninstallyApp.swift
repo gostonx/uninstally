@@ -10,6 +10,7 @@ import SwiftUI
 struct UninstallyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var coordinator = AppCoordinator()
+    @State private var tabManager = TabManager()
 
     var body: some Scene {
         WindowGroup {
@@ -33,6 +34,7 @@ struct UninstallyApp: App {
 
         Settings {
             SettingsView()
+                .environment(tabManager)
         }
     }
 }

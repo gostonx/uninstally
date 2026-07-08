@@ -50,7 +50,7 @@ struct AppBrowserView: View {
     }
 
     private var grid: some View {
-        ScrollView {
+        HapticScrollView {
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 18)],
                 spacing: 18
@@ -66,7 +66,6 @@ struct AppBrowserView: View {
             }
             .padding(20)
         }
-        .scrollContentBackground(.hidden)
     }
 
     private var list: some View {
@@ -185,6 +184,7 @@ struct AppBrowserView: View {
     // MARK: - Actions
 
     private func handleTap(_ app: AppInfo) {
+        HapticManager.shared.itemSelected()
         if isSelecting {
             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                 if model.selection.contains(app.id) {

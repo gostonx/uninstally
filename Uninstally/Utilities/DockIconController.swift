@@ -6,6 +6,13 @@ enum AppSettings {
     /// Whether Uninstally shows an icon in the Dock. Defaults to `false`, keeping
     /// the app as a lightweight accessory unless the user opts in.
     static let showDockIconKey = "showDockIcon"
+
+    /// Whether subtle trackpad haptic feedback is enabled. Defaults to `true`.
+    static let hapticsEnabledKey = "hapticsEnabled"
+
+    /// JSON-encoded array of `SettingsTabConfig` describing the Settings tab
+    /// order, custom names and enabled state.
+    static let settingsTabsKey = "settingsTabsConfiguration"
 }
 
 /// Applies the Dock-icon preference by switching the process activation policy.

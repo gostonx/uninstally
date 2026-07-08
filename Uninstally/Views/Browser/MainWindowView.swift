@@ -27,6 +27,9 @@ struct MainWindowView: View {
         .task {
             if browser.apps.isEmpty { await browser.load() }
         }
+        .onChange(of: selection) { _, _ in
+            HapticManager.shared.sectionChanged()
+        }
     }
 
     // MARK: - Sidebar
