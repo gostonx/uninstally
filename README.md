@@ -9,6 +9,14 @@ A native macOS uninstaller by **Codenta**: the simplest, cleanest way to
 completely remove applications and every file they leave behind. Built entirely
 with SwiftUI and Apple's native frameworks (no Electron, no web tech).
 
+<p align="center">
+  <a href="https://codenta.us/"><b>Website</b></a> ·
+  <a href="https://github.com/gostonx/uninstally/releases/latest"><b>Download</b></a> ·
+  <a href="https://codenta.us/">More from Codenta</a>
+</p>
+
+> Made by Codenta — explore all our macOS apps at **[codenta.us](https://codenta.us/)**.
+
 ---
 
 ## Highlights
