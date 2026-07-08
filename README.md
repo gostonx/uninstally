@@ -5,6 +5,11 @@
   <img src="docs/uninstall-window.png" alt="Uninstally uninstall confirmation window showing removable files" width="49%" />
 </p>
 
+<p align="center">
+  <img src="docs/screenshot-3.png" alt="Uninstally screenshot" width="49%" />
+  <img src="docs/screenshot-4.png" alt="Uninstally screenshot" width="49%" />
+</p>
+
 A native macOS uninstaller by **Codenta**: the simplest, cleanest way to
 completely remove applications and every file they leave behind. Built entirely
 with SwiftUI and Apple's native frameworks (no Electron, no web tech).
