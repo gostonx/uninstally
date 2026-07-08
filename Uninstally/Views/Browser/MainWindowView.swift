@@ -80,6 +80,14 @@ struct MainWindowView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            SettingsLink {
+                Image(systemName: "gearshape")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Settings")
+            .accessibilityLabel("Open Settings")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

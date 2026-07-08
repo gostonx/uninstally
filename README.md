@@ -1,6 +1,10 @@
 # Uninstally
 
 <p align="center">
+  <img src="docs/uninstally-demo.gif" alt="Uninstally demo — uninstalling an app and its leftover files" width="80%" />
+</p>
+
+<p align="center">
   <img src="docs/finder-menu.png" alt="Uninstall with Uninstally in the Finder right-click menu" width="49%" />
   <img src="docs/uninstall-window.png" alt="Uninstally uninstall confirmation window showing removable files" width="49%" />
 </p>

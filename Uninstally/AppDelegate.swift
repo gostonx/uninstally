@@ -18,8 +18,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // No Dock icon, no menu-bar item — appears only via windows we present.
-        NSApp.setActivationPolicy(.accessory)
+        // Apply the user's Dock-icon preference (defaults to accessory: no Dock or
+        // menu-bar presence).
+        DockIconController.applyStoredPreference()
         NotificationService.shared.requestAuthorizationIfNeeded()
     }
 

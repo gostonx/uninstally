@@ -30,5 +30,9 @@ struct UninstallyApp: App {
                 .keyboardShortcut("r", modifiers: .command)
             }
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }
