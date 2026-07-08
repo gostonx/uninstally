@@ -1,94 +1,66 @@
 # GitHub Actions Secrets
 
-The release pipeline (`.github/workflows/release.yml`) needs the following
-repository secrets. Add them under **Settings → Secrets and variables → Actions →
-New repository secret** in `gostonx/uninstally`.
+Uninstally ships with a **free** release pipeline — no Apple Developer ID and no
+notarization. Update security comes entirely from Sparkle's EdDSA signature, so
+the only secrets you need are:
 
 | Secret | Purpose |
 |--------|---------|
-| `BUILD_CERTIFICATE_BASE64` | Base64 of your **Developer ID Application** certificate exported as a `.p12`. |
-| `CERTIFICATE_PASSWORD` | The password you set when exporting the `.p12`. |
-| `KEYCHAIN_PASSWORD` | Any random string; used to create the temporary CI keychain. |
-| `DEVELOPER_ID` | The full signing identity, e.g. `Developer ID Application: Your Name (TEAMID)`. |
-| `TEAM_ID` | Your 10-character Apple Developer Team ID. |
-| `APPLE_ID` | The Apple ID email used for notarization. |
-| `APPLE_APP_PASSWORD` | An **app-specific password** for that Apple ID (not your login password). |
-| `SPARKLE_PRIVATE_KEY` | The EdDSA private key produced by Sparkle's `generate_keys` (base64 string). |
-| `SITE_REPO_TOKEN` | A fine-grained PAT with `contents: write` on `gostonx/codenta-site` (used to deploy the appcast + website). |
-| `CLOUDFLARE_API_TOKEN` | *(optional)* Cloudflare token if deploying with `wrangler` instead of a site-repo commit. |
-| `CLOUDFLARE_ACCOUNT_ID` | *(optional)* Cloudflare account ID. |
-| `CLOUDFLARE_PROJECT_NAME` | *(optional)* Cloudflare Pages project name. |
+| `SPARKLE_PRIVATE_KEY` | The EdDSA private key produced by Sparkle's `generate_keys` (base64 string). This signs each release; the app verifies it against `SUPublicEDKey`. |
+| `SITE_REPO_TOKEN` | A fine-grained PAT with **Contents: Read and write** on `gostonx/codenta-site`. Used to deploy the regenerated `appcast.xml` + updated download links (Cloudflare Pages then builds automatically). |
+
+Add them under **Settings → Secrets and variables → Actions → New repository
+secret** in `gostonx/uninstally`.
 
 ---
 
-## How to obtain each value
+## `SPARKLE_PRIVATE_KEY`
 
-### `BUILD_CERTIFICATE_BASE64` + `CERTIFICATE_PASSWORD` + `DEVELOPER_ID` + `TEAM_ID`
-
-1. In **Xcode → Settings → Accounts**, add your Apple ID and create a **Developer
-   ID Application** certificate (or use **Keychain Access → Certificate
-   Assistant**).
-2. In **Keychain Access**, find *Developer ID Application: Your Name (TEAMID)*,
-   right-click → **Export** → save as `cert.p12`, set a password
-   (= `CERTIFICATE_PASSWORD`).
-3. Base64-encode it:
-   ```sh
-   base64 -i cert.p12 | pbcopy      # paste into BUILD_CERTIFICATE_BASE64
-   ```
-4. `DEVELOPER_ID` is the exact certificate name; `TEAM_ID` is the value in
-   parentheses (also shown at https://developer.apple.com/account under
-   Membership).
-
-### `KEYCHAIN_PASSWORD`
-
-Any random string, e.g. `openssl rand -base64 24`.
-
-### `APPLE_ID` + `APPLE_APP_PASSWORD`
-
-1. `APPLE_ID` is your developer Apple ID email.
-2. Create an app-specific password at https://appleid.apple.com → **Sign-In &
-   Security → App-Specific Passwords**. Store it as `APPLE_APP_PASSWORD`.
-
-### `SPARKLE_PRIVATE_KEY`
-
-Generate the EdDSA key pair **once** with Sparkle's tool:
+Generate the EdDSA key pair **once** (this is free and requires no Apple account):
 
 ```sh
-# Download Sparkle tools (same version as the SPM dependency), then:
+# Download Sparkle's tools (same 2.x version as the SPM dependency), then:
 ./bin/generate_keys
 ```
 
-This stores the private key in your login Keychain and prints the **public** key.
+`generate_keys` stores the private key in your login Keychain and prints the
+**public** key.
 
-- Put the **public** key into `Config/Uninstally-Info.plist` under `SUPublicEDKey`
-  (replacing the placeholder committed today).
-- Export the **private** key for CI:
-  ```sh
-  ./bin/generate_keys -x sparkle_private_key.txt
-  ```
-  Paste the contents of `sparkle_private_key.txt` into the `SPARKLE_PRIVATE_KEY`
-  secret, then delete the file. **Never commit the private key.**
+1. Put the **public** key into `Config/Uninstally-Info.plist` under
+   `SUPublicEDKey`, replacing the placeholder committed today.
+2. Export the **private** key for CI and paste it into the `SPARKLE_PRIVATE_KEY`
+   secret, then delete the file:
+   ```sh
+   ./bin/generate_keys -x sparkle_private_key.txt
+   # copy the contents into the secret, then:
+   rm sparkle_private_key.txt
+   ```
 
-### `SITE_REPO_TOKEN`
+**Never commit the private key.** The public key in the app and the private key in
+CI are a matched pair — if they don't match, Sparkle rejects every update
+(fail-closed). See `docs/UPDATES.md` for rotation and revocation.
 
-Create a **fine-grained personal access token** (https://github.com/settings/tokens)
-scoped to `gostonx/codenta-site` with **Contents: Read and write**. This lets the
-release job commit the regenerated `appcast.xml` and updated download links, which
-triggers the Cloudflare Pages deploy.
+## `SITE_REPO_TOKEN`
 
-### Cloudflare (optional direct deploy)
+Create a **fine-grained personal access token**
+(https://github.com/settings/tokens) scoped to `gostonx/codenta-site` with
+**Contents: Read and write**. The release job commits the regenerated
+`appcast.xml` and updated download links, which triggers the Cloudflare Pages
+deploy of `https://codenta.us`.
 
-Only needed if you prefer `wrangler pages deploy` over committing to the site
-repo. Create an API token with **Cloudflare Pages: Edit**; the account ID and
-project name are shown in the Cloudflare dashboard.
+### Optional: direct Cloudflare deploy
+
+If you ever prefer `wrangler pages deploy` over committing to the site repo,
+you'd add `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and
+`CLOUDFLARE_PROJECT_NAME`. The default pipeline does **not** use these.
 
 ---
 
-## Security notes
+## Why no Apple secrets?
 
-- The public EdDSA key in the app and the private key in CI are a matched pair. If
-  they don't match, Sparkle rejects every update (fail-closed) — see
-  `docs/UPDATES.md` for rotation and revocation.
-- Notarization credentials and signing certs are only ever exposed to the macOS
-  runner during a tagged release and are removed from the keychain in the final
-  `always()` step.
+A Developer ID + notarization only affect the **first manual download** (Gatekeeper
+shows an "unidentified developer" prompt once). They are **not** required for
+Sparkle's auto-update: Sparkle verifies updates with EdDSA and strips the
+quarantine flag from the updates it installs, so ongoing updates are seamless. See
+`docs/UPDATES.md` for the full model and how to reduce first-install friction
+(Homebrew / right-click → Open).

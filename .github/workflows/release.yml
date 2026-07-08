@@ -8,7 +8,17 @@ name: Release
 #   v1.4.0-beta.1     -> beta channel   (GitHub pre-release)
 #   v1.4.0-nightly.5  -> nightly channel (GitHub pre-release)
 #
-# Required repository secrets are documented in docs/SECRETS.md.
+# This is a free pipeline: no Apple Developer ID and no notarization. Updates are
+# secured by Sparkle's EdDSA signature (verified against SUPublicEDKey in the app),
+# which is entirely independent of Apple code signing. The app and DMG are ad-hoc
+# signed (required on Apple Silicon, free). The only user-visible effect of not
+# notarizing is a one-time Gatekeeper "Open anyway" on the first manual download;
+# Sparkle removes the quarantine flag from the updates it installs, so ongoing
+# auto-updates are prompt-free.
+#
+# Required repository secrets (see docs/SECRETS.md):
+#   SPARKLE_PRIVATE_KEY  - EdDSA private key from Sparkle's generate_keys
+#   SITE_REPO_TOKEN      - PAT with contents:write on gostonx/codenta-site
 
 on:
   push:
@@ -62,30 +72,11 @@ jobs:
       - name: Synchronise bundle version
         run: scripts/bump_version.sh "${{ steps.ver.outputs.marketing }}" "${{ steps.ver.outputs.build }}"
 
-      # --------------------------------------------------------------------
-      # Code-signing keychain (Developer ID Application certificate).
-      # --------------------------------------------------------------------
-      - name: Import signing certificate
-        env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          CERT_PATH="$RUNNER_TEMP/cert.p12"
-          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
-          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security import "$CERT_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
-          security list-keychain -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-
       - name: Resolve Swift packages
         run: xcodebuild -project "$APP_NAME.xcodeproj" -scheme "$SCHEME" -resolvePackageDependencies
 
       # --------------------------------------------------------------------
-      # Build, test, archive, export.
+      # Build, test, archive, export (ad-hoc signed — free, no Developer ID).
       # --------------------------------------------------------------------
       - name: Run tests
         continue-on-error: true
@@ -97,9 +88,6 @@ jobs:
             echo "No test target or tests failed (non-blocking)."
 
       - name: Archive
-        env:
-          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID }}
-          TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
           xcodebuild archive \
             -project "$APP_NAME.xcodeproj" -scheme "$SCHEME" \
@@ -107,53 +95,37 @@ jobs:
             -archivePath "$RUNNER_TEMP/$APP_NAME.xcarchive" \
             -destination 'generic/platform=macOS' \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="$DEVELOPER_ID" \
-            DEVELOPMENT_TEAM="$TEAM_ID" \
-            ENABLE_HARDENED_RUNTIME=YES \
-            OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime"
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM=""
 
       - name: Export app
-        env:
-          TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
-          envsubst < scripts/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
-          xcodebuild -exportArchive \
-            -archivePath "$RUNNER_TEMP/$APP_NAME.xcarchive" \
-            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/export"
+          # Copy the built app out of the archive (no Developer ID export needed).
+          mkdir -p "$RUNNER_TEMP/export"
+          cp -R "$RUNNER_TEMP/$APP_NAME.xcarchive/Products/Applications/$APP_NAME.app" "$RUNNER_TEMP/export/"
+
+      - name: Ad-hoc sign app
+        run: |
+          # Deep ad-hoc sign so every nested binary/framework is signed (required
+          # to run on Apple Silicon). This is free and needs no certificate.
+          codesign --force --deep --sign - "$RUNNER_TEMP/export/$APP_NAME.app"
+          codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/export/$APP_NAME.app"
 
       # --------------------------------------------------------------------
-      # DMG, notarize, staple, verify.
+      # DMG (ad-hoc signed).
       # --------------------------------------------------------------------
       - name: Create DMG
         run: |
           brew install create-dmg
           scripts/create_dmg.sh "$RUNNER_TEMP/export/$APP_NAME.app" "$RUNNER_TEMP/$APP_NAME.dmg"
 
-      - name: Sign DMG
-        env:
-          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID }}
-        run: codesign --force --sign "$DEVELOPER_ID" --timestamp "$RUNNER_TEMP/$APP_NAME.dmg"
-
-      - name: Notarize and staple DMG
-        env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
-          TEAM_ID: ${{ secrets.TEAM_ID }}
-        run: |
-          xcrun notarytool submit "$RUNNER_TEMP/$APP_NAME.dmg" \
-            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$TEAM_ID" \
-            --wait
-          xcrun stapler staple "$RUNNER_TEMP/$APP_NAME.dmg"
-
-      - name: Verify signature and notarization
-        run: |
-          codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/export/$APP_NAME.app"
-          spctl --assess --type open --context context:primary-signature -v "$RUNNER_TEMP/$APP_NAME.dmg"
-          xcrun stapler validate "$RUNNER_TEMP/$APP_NAME.dmg"
+      - name: Ad-hoc sign DMG
+        run: codesign --force --sign - "$RUNNER_TEMP/$APP_NAME.dmg"
 
       # --------------------------------------------------------------------
-      # SHA256 + Sparkle EdDSA signature.
+      # SHA256 + Sparkle EdDSA signature (the actual update security boundary).
       # --------------------------------------------------------------------
       - name: Compute SHA256
         id: hash
@@ -244,15 +216,3 @@ jobs:
           git add appcast.xml uninstally-version.json index.html products.html
           git commit -m "Release Uninstally ${{ steps.ver.outputs.marketing }}" || echo "Nothing to commit"
           git push
-
-      # Optional: direct Cloudflare Pages deploy (alternative to the git push above).
-      # - name: Deploy to Cloudflare Pages
-      #   uses: cloudflare/wrangler-action@v3
-      #   with:
-      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      #     command: pages deploy site --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }}
-
-      - name: Clean up keychain
-        if: always()
-        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true

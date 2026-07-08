@@ -7,8 +7,8 @@ App Store. We deliberately do **not** ship a custom updater.
 ```
    ┌────────────┐   push tag v1.4.0    ┌─────────────────────┐
    │  Developer │ ───────────────────▶ │   GitHub Actions    │
-   └────────────┘                      │  build · sign ·     │
-                                       │  notarize · DMG ·   │
+   └────────────┘                      │  build · ad-hoc     │
+                                       │  sign · DMG ·       │
                                        │  EdDSA sign · appcast│
                                        └──────────┬──────────┘
                                                   │ publish
@@ -70,11 +70,30 @@ breaking every installed client, because the client only ever knows about
 
 ## How GitHub Actions works
 
-See `.github/workflows/release.yml`. Triggered by any `v*` tag, it performs the
-full pipeline (build → test → archive → export → DMG → codesign → notarize →
-staple → verify → SHA256 → EdDSA sign → appcast → GitHub release → website
-deploy). See `docs/RELEASING.md` for the developer flow and
-`docs/SECRETS.md` for required secrets.
+See `.github/workflows/release.yml`. Triggered by any `v*` tag, it runs a **free**
+pipeline (no Apple Developer ID, no notarization): version sync → build → test →
+DMG → **ad-hoc code sign** → SHA256 → **Sparkle EdDSA sign** → appcast → GitHub
+release → website deploy. See `docs/RELEASING.md` for the developer flow and
+`docs/SECRETS.md` for the two required secrets.
+
+## Signing & Gatekeeper (no Developer ID)
+
+Update trust does **not** depend on Apple. The security boundary is Sparkle's
+**EdDSA signature**, verified against `SUPublicEDKey`. The pipeline **ad-hoc**
+signs the app and DMG (`codesign -s -`), which is free and is all that Apple
+Silicon requires to *run* a binary.
+
+The only consequence of skipping notarization is the **first manual download**:
+macOS Gatekeeper shows an "unidentified developer" prompt once. Two ways to smooth
+this over:
+
+- **Homebrew (recommended, no prompt):** `brew install --cask gostonx/tap/uninstally`
+- **Direct download:** right-click the app → **Open** once to approve it.
+
+Crucially, once the app is trusted, **Sparkle removes the `com.apple.quarantine`
+flag from the updates it installs**, so every subsequent auto-update is prompt-free
+— the experience matches a notarized app from then on.
+
 
 ## How website deployment works
 

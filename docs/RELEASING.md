@@ -1,8 +1,11 @@
 # Releasing Uninstally
 
 Releasing is intentionally a three-step operation. Everything else — building,
-testing, signing, notarizing, DMG creation, appcast generation, GitHub release,
-and website deployment — is automated by `.github/workflows/release.yml`.
+testing, ad-hoc signing, DMG creation, EdDSA signing, appcast generation, GitHub
+release, and website deployment — is automated by
+`.github/workflows/release.yml`. There is **no Apple Developer ID and no
+notarization**; update integrity is guaranteed by Sparkle's EdDSA signature (see
+`docs/UPDATES.md`).
 
 ## Publish a stable release
 
@@ -24,9 +27,9 @@ That's it. Within a few minutes the pipeline will:
 
 1. Derive the version (`1.4.0`) and build number (`GITHUB_RUN_NUMBER`) and write
    them into both Info.plists (`scripts/bump_version.sh`).
-2. Build, run tests, archive, and export a Developer ID–signed app.
-3. Build a professional DMG (`scripts/create_dmg.sh`), sign, **notarize**, and
-   **staple** it, then verify with `codesign`/`spctl`/`stapler`.
+2. Build, run tests, archive, and export an **ad-hoc signed** app (free; required
+   on Apple Silicon).
+3. Build a professional DMG (`scripts/create_dmg.sh`) and ad-hoc sign it.
 4. Compute the SHA-256 and the **Sparkle EdDSA signature** of the DMG.
 5. Extract release notes from `CHANGELOG.md`
    (`scripts/extract_release_notes.py`).
@@ -76,7 +79,7 @@ Because the DMG is only published and the appcast only updated in the **final**
 steps, a failure partway through leaves users unaffected (they keep seeing the
 previous appcast).
 
-- **Build/sign/notarize failed:** fix the issue, delete the tag, re-tag.
+- **Build/sign/DMG step failed:** fix the issue, delete the tag, re-tag.
   ```sh
   git push --delete origin v1.4.0
   git tag -d v1.4.0
