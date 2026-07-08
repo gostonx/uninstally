@@ -11,12 +11,14 @@ struct UninstallyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var coordinator = AppCoordinator()
     @State private var sidebarManager = SidebarManager()
+    @State private var appSidebarManager = AppSidebarManager()
     @State private var updateManager = UpdateManager()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(coordinator)
+                .environment(appSidebarManager)
                 .environment(updateManager)
                 .onOpenURL { coordinator.open($0) }
                 .onAppear { appDelegate.attach(coordinator) }

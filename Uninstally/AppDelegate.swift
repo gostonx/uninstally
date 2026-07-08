@@ -22,6 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // menu-bar presence).
         DockIconController.applyStoredPreference()
         NotificationService.shared.requestAuthorizationIfNeeded()
+        // Even as an accessory app, bring our window to the front on a normal
+        // launch so it doesn't open hidden behind other windows.
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     /// Handles `.app` bundles opened via "Open With" or dropped on the app.

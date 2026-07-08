@@ -4,6 +4,14 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.4.1] — 2026-07-08
+
+### Fixed
+- Fixed a crash on launch in 1.4.0 where the main window failed to find the
+  Applications sidebar model, preventing the app from opening.
+- The window now reliably comes to the front on a normal launch (the app runs as
+  a menu-less accessory by default; enable a Dock icon in Settings → Appearance).
+
 ## [1.4.0] — 2026-07-08
 
 ### Added
@@ -71,6 +79,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.4.1]: https://github.com/gostonx/uninstally/releases/tag/v1.4.1
 [1.4.0]: https://github.com/gostonx/uninstally/releases/tag/v1.4.0
 [1.3.0]: https://github.com/gostonx/uninstally/releases/tag/v1.3.0
 [1.2.0]: https://github.com/gostonx/uninstally/releases/tag/v1.2.0
