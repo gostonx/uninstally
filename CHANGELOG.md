@@ -4,6 +4,22 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.4.0] — 2026-07-08
+
+### Added
+- **Automatic updates via Sparkle.** Uninstally now checks for updates on launch
+  and every 24 hours, downloads and verifies them securely, and installs with a
+  relaunch — all through Sparkle's native UI.
+  - Updates are read only from the signed appcast at `https://codenta.us/appcast.xml`
+    and must carry a valid EdDSA signature; unsigned or tampered updates are rejected.
+  - New **Updates** settings: current/latest version, last checked, update channel,
+    automatic check/download toggles, beta updates, and Check Now / Clear Ignored
+    Version / Reset Update Preferences.
+  - Stable, Beta and Nightly channels.
+- **Fully automated release pipeline** (GitHub Actions): pushing a `v*` tag builds,
+  tests, signs, notarizes, staples, creates a DMG, generates the appcast, publishes
+  the GitHub release, and deploys the website — with zero manual steps.
+
 ## [1.3.0] — 2026-07-08
 
 ### Changed
@@ -55,6 +71,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.4.0]: https://github.com/gostonx/uninstally/releases/tag/v1.4.0
 [1.3.0]: https://github.com/gostonx/uninstally/releases/tag/v1.3.0
 [1.2.0]: https://github.com/gostonx/uninstally/releases/tag/v1.2.0
 [1.1.0]: https://github.com/gostonx/uninstally/releases/tag/v1.1.0

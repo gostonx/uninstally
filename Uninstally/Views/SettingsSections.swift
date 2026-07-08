@@ -249,53 +249,74 @@ private struct AdvancedContent: View {
 
 // MARK: - Updates
 
+/// The Updates section, backed by the Sparkle-powered `UpdateManager`. The actual
+/// download / release-notes / install experience is Sparkle's native UI; this
+/// screen surfaces status and the user preferences.
 private struct UpdatesContent: View {
-    private enum Status: Equatable {
-        case idle, checking, upToDate, available(String, URL), failed(String)
-    }
-
-    @State private var status: Status = .idle
-    @State private var lastChecked: Date?
-
-    private static let api = URL(string: "https://api.github.com/repos/gostonx/uninstally/releases/latest")!
-    private static let releasesPage = URL(string: "https://github.com/gostonx/uninstally/releases/latest")!
-
-    private var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
-    }
+    @Environment(UpdateManager.self) private var updater
 
     var body: some View {
-        SettingsCard {
-            infoRow(title: "Current Version", trailing: Text(currentVersion).foregroundStyle(.secondary))
-            RowDivider()
-            infoRow(title: "Status", trailing: statusView)
-            if let lastChecked {
+        @Bindable var updater = updater
+
+        VStack(spacing: 14) {
+            SettingsCard {
+                infoRow("Current Version", trailing: Text(updater.currentVersion).foregroundStyle(.secondary))
                 RowDivider()
-                infoRow(
-                    title: "Last Checked",
-                    trailing: Text(lastChecked.formatted(date: .abbreviated, time: .shortened))
-                        .foregroundStyle(.secondary)
+                infoRow("Latest Version", trailing: Text(updater.latestVersion ?? "—").foregroundStyle(.secondary))
+                RowDivider()
+                infoRow("Last Checked", trailing: Text(lastCheckedText).foregroundStyle(.secondary))
+                RowDivider()
+                infoRow("Status", trailing: statusView)
+            }
+
+            SettingsCard {
+                channelRow($updater.channel, betaEnabled: updater.receiveBetaUpdates)
+                RowDivider()
+                SettingsToggleRow(
+                    title: "Automatically Check for Updates",
+                    isOn: $updater.automaticallyChecksForUpdates
+                )
+                RowDivider()
+                SettingsToggleRow(
+                    title: "Automatically Download Updates",
+                    isOn: $updater.automaticallyDownloadsUpdates
+                )
+                RowDivider()
+                SettingsToggleRow(
+                    title: "Receive Beta Updates",
+                    subtitle: "Include pre-release builds from the selected channel.",
+                    isOn: $updater.receiveBetaUpdates
                 )
             }
-            RowDivider()
-            HStack(spacing: 10) {
-                Button {
-                    Task { await check() }
-                } label: {
-                    Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+
+            SettingsCard {
+                HStack(spacing: 10) {
+                    Button {
+                        updater.checkForUpdates()
+                    } label: {
+                        Label("Check Now", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(updater.status == .checking)
+
+                    Spacer()
+
+                    Button("Clear Ignored Version") { updater.clearIgnoredVersion() }
+                        .controlSize(.small)
+                    Button("Reset Update Preferences") { updater.resetUpdatePreferences() }
+                        .controlSize(.small)
                 }
-                .disabled(status == .checking)
-                Link(destination: Self.releasesPage) {
-                    Label("Releases", systemImage: "arrow.up.right.square")
-                }
-                Spacer()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
         }
     }
 
-    private func infoRow(title: String, trailing: some View) -> some View {
+    private var lastCheckedText: String {
+        guard let date = updater.lastChecked else { return "Never" }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func infoRow(_ title: String, trailing: some View) -> some View {
         HStack {
             Text(title)
             Spacer(minLength: 8)
@@ -306,50 +327,44 @@ private struct UpdatesContent: View {
         .accessibilityElement(children: .combine)
     }
 
+    private func channelRow(_ selection: Binding<UpdateChannel>, betaEnabled: Bool) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Update Channel")
+                if !betaEnabled {
+                    Text("Enable beta updates to choose a pre-release channel.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            Picker("Update Channel", selection: selection) {
+                ForEach(UpdateChannel.allCases) { channel in
+                    Text(channel.title).tag(channel)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .disabled(!betaEnabled)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
     @ViewBuilder
     private var statusView: some View {
-        switch status {
+        switch updater.status {
         case .idle:
             Text("Not checked yet").foregroundStyle(.secondary)
         case .checking:
             HStack(spacing: 6) { ProgressView().controlSize(.small); Text("Checking…") }
         case .upToDate:
             Label("You're up to date", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
-        case .available(let version, let url):
-            Link(destination: url) {
-                Label("Update available: \(version)", systemImage: "arrow.down.circle.fill")
-            }
-        case .failed(let message):
+        case .updateAvailable(let version):
+            Label("Update available: \(version)", systemImage: "arrow.down.circle.fill")
+                .foregroundStyle(Color.accentColor)
+        case .error(let message):
             Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-        }
-    }
-
-    private func check() async {
-        status = .checking
-        defer { lastChecked = Date() }
-        do {
-            var request = URLRequest(url: Self.api)
-            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-            request.setValue("Uninstally", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                status = .failed("Couldn't reach GitHub"); return
-            }
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
-            let release = try decoder.decode(GitHubRelease.self, from: data)
-            guard let latest = SemanticVersion(release.tagName),
-                  let current = SemanticVersion(currentVersion) else {
-                status = .failed("Couldn't read version"); return
-            }
-            if latest > current {
-                status = .available(release.tagName, release.htmlURL)
-                HapticManager.shared.itemSelected()
-            } else {
-                status = .upToDate
-            }
-        } catch {
-            status = .failed("Check failed")
         }
     }
 }

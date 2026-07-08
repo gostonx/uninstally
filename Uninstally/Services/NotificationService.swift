@@ -32,4 +32,18 @@ final class NotificationService: @unchecked Sendable {
         )
         center.add(request)
     }
+
+    /// Posts a general-purpose notification (used by the update pipeline).
+    func post(title: String, body: String, sound: Bool = false) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        if sound { content.sound = .default }
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        center.add(request)
+    }
 }

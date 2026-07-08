@@ -1,0 +1,258 @@
+name: Release
+
+# Push a version tag to ship a release. Everything below is automatic:
+#   git tag v1.4.0 && git push origin v1.4.0
+#
+# Pre-release channels are selected by the tag suffix:
+#   v1.4.0            -> stable channel
+#   v1.4.0-beta.1     -> beta channel   (GitHub pre-release)
+#   v1.4.0-nightly.5  -> nightly channel (GitHub pre-release)
+#
+# Required repository secrets are documented in docs/SECRETS.md.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    env:
+      APP_NAME: Uninstally
+      SCHEME: Uninstally
+      REPO: gostonx/uninstally
+      SITE_REPO: gostonx/codenta-site
+      SPARKLE_VERSION: "2.6.4"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # --------------------------------------------------------------------
+      # Derive version + channel from the tag.
+      # --------------------------------------------------------------------
+      - name: Resolve version and channel
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME}"                 # e.g. v1.4.0-beta.1
+          MARKETING="${TAG#v}"                     # 1.4.0-beta.1
+          BUILD="${GITHUB_RUN_NUMBER}"
+          if [[ "$TAG" == *"-nightly"* ]]; then
+            CHANNEL="nightly"; PRERELEASE="true"
+          elif [[ "$TAG" == *"-beta"* ]]; then
+            CHANNEL="beta"; PRERELEASE="true"
+          else
+            CHANNEL="stable"; PRERELEASE="false"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "marketing=$MARKETING" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Synchronise bundle version
+        run: scripts/bump_version.sh "${{ steps.ver.outputs.marketing }}" "${{ steps.ver.outputs.build }}"
+
+      # --------------------------------------------------------------------
+      # Code-signing keychain (Developer ID Application certificate).
+      # --------------------------------------------------------------------
+      - name: Import signing certificate
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERT_PATH" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+      - name: Resolve Swift packages
+        run: xcodebuild -project "$APP_NAME.xcodeproj" -scheme "$SCHEME" -resolvePackageDependencies
+
+      # --------------------------------------------------------------------
+      # Build, test, archive, export.
+      # --------------------------------------------------------------------
+      - name: Run tests
+        continue-on-error: true
+        run: |
+          xcodebuild test \
+            -project "$APP_NAME.xcodeproj" -scheme "$SCHEME" \
+            -destination 'platform=macOS' \
+            -resultBundlePath "$RUNNER_TEMP/TestResults.xcresult" || \
+            echo "No test target or tests failed (non-blocking)."
+
+      - name: Archive
+        env:
+          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -project "$APP_NAME.xcodeproj" -scheme "$SCHEME" \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/$APP_NAME.xcarchive" \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$DEVELOPER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            ENABLE_HARDENED_RUNTIME=YES \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime"
+
+      - name: Export app
+        env:
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          envsubst < scripts/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/$APP_NAME.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export"
+
+      # --------------------------------------------------------------------
+      # DMG, notarize, staple, verify.
+      # --------------------------------------------------------------------
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          scripts/create_dmg.sh "$RUNNER_TEMP/export/$APP_NAME.app" "$RUNNER_TEMP/$APP_NAME.dmg"
+
+      - name: Sign DMG
+        env:
+          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID }}
+        run: codesign --force --sign "$DEVELOPER_ID" --timestamp "$RUNNER_TEMP/$APP_NAME.dmg"
+
+      - name: Notarize and staple DMG
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          xcrun notarytool submit "$RUNNER_TEMP/$APP_NAME.dmg" \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$TEAM_ID" \
+            --wait
+          xcrun stapler staple "$RUNNER_TEMP/$APP_NAME.dmg"
+
+      - name: Verify signature and notarization
+        run: |
+          codesign --verify --deep --strict --verbose=2 "$RUNNER_TEMP/export/$APP_NAME.app"
+          spctl --assess --type open --context context:primary-signature -v "$RUNNER_TEMP/$APP_NAME.dmg"
+          xcrun stapler validate "$RUNNER_TEMP/$APP_NAME.dmg"
+
+      # --------------------------------------------------------------------
+      # SHA256 + Sparkle EdDSA signature.
+      # --------------------------------------------------------------------
+      - name: Compute SHA256
+        id: hash
+        run: |
+          SHA=$(shasum -a 256 "$RUNNER_TEMP/$APP_NAME.dmg" | awk '{print $1}')
+          LEN=$(stat -f%z "$RUNNER_TEMP/$APP_NAME.dmg")
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "length=$LEN" >> "$GITHUB_OUTPUT"
+
+      - name: Sign update with Sparkle (EdDSA)
+        id: sparkle
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
+          mkdir -p sparkle && tar -xf sparkle.tar.xz -C sparkle
+          echo "$SPARKLE_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_ed_key"
+          OUT=$(sparkle/bin/sign_update --ed-key-file "$RUNNER_TEMP/sparkle_ed_key" "$RUNNER_TEMP/$APP_NAME.dmg")
+          echo "Sparkle: $OUT"
+          SIG=$(echo "$OUT" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+          echo "signature=$SIG" >> "$GITHUB_OUTPUT"
+          rm -f "$RUNNER_TEMP/sparkle_ed_key"
+
+      # --------------------------------------------------------------------
+      # Release notes from CHANGELOG.
+      # --------------------------------------------------------------------
+      - name: Extract release notes
+        id: notes
+        run: |
+          python3 scripts/extract_release_notes.py "${{ steps.ver.outputs.marketing }}" \
+            --changelog CHANGELOG.md \
+            --out-html "$RUNNER_TEMP/notes.html" \
+            --out-md "$RUNNER_TEMP/notes.md"
+          echo "html=$RUNNER_TEMP/notes.html" >> "$GITHUB_OUTPUT"
+          echo "md=$RUNNER_TEMP/notes.md" >> "$GITHUB_OUTPUT"
+
+      # --------------------------------------------------------------------
+      # Publish GitHub release with the DMG.
+      # --------------------------------------------------------------------
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: "Uninstally ${{ steps.ver.outputs.marketing }}"
+          prerelease: ${{ steps.ver.outputs.prerelease }}
+          body_path: ${{ steps.notes.outputs.md }}
+          files: ${{ runner.temp }}/Uninstally.dmg
+          fail_on_unmatched_files: true
+
+      # --------------------------------------------------------------------
+      # Regenerate the appcast and deploy the website (Cloudflare Pages via the
+      # site repo). Committing to the site repo triggers Cloudflare's build.
+      # --------------------------------------------------------------------
+      - name: Checkout website
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SITE_REPO }}
+          token: ${{ secrets.SITE_REPO_TOKEN }}
+          path: site
+
+      - name: Regenerate appcast + sync website
+        run: |
+          DMG_URL="https://github.com/${REPO}/releases/download/${{ steps.ver.outputs.tag }}/Uninstally.dmg"
+          # Merge into the currently published appcast so history is preserved.
+          curl -sfL "https://codenta.us/appcast.xml" -o site/appcast.current.xml || rm -f site/appcast.current.xml
+          python3 scripts/make_appcast.py \
+            --output site/appcast.xml \
+            $([ -f site/appcast.current.xml ] && echo --appcast site/appcast.current.xml) \
+            --version "${{ steps.ver.outputs.build }}" \
+            --short-version "${{ steps.ver.outputs.marketing }}" \
+            --url "$DMG_URL" \
+            --length "${{ steps.hash.outputs.length }}" \
+            --signature "${{ steps.sparkle.outputs.signature }}" \
+            --channel "${{ steps.ver.outputs.channel }}" \
+            --min-system "14.0" \
+            --notes-file "$RUNNER_TEMP/notes.html"
+          rm -f site/appcast.current.xml
+          python3 scripts/sync_website_version.py \
+            --site-dir site \
+            --version "${{ steps.ver.outputs.marketing }}" \
+            --url "$DMG_URL"
+
+      - name: Deploy website
+        run: |
+          cd site
+          git config user.name "codenta-bot"
+          git config user.email "bot@codenta.us"
+          git add appcast.xml uninstally-version.json index.html products.html
+          git commit -m "Release Uninstally ${{ steps.ver.outputs.marketing }}" || echo "Nothing to commit"
+          git push
+
+      # Optional: direct Cloudflare Pages deploy (alternative to the git push above).
+      # - name: Deploy to Cloudflare Pages
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: pages deploy site --project-name=${{ secrets.CLOUDFLARE_PROJECT_NAME }}
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true

@@ -32,6 +32,21 @@ enum AppSettings {
 
     /// Always require an explicit confirmation before deleting.
     static let requireConfirmationKey = "requireDeleteConfirmation"
+
+    // MARK: Applications sidebar
+
+    /// JSON-encoded array of `AppSidebarItemConfig` describing the main
+    /// Applications sidebar order, visibility and pinned state.
+    static let appSidebarKey = "appSidebarConfiguration"
+    /// Whether the main Applications sidebar is collapsed.
+    static let appSidebarCollapsedKey = "appSidebarCollapsed"
+
+    // MARK: Updates
+
+    /// Selected update channel (`stable`, `beta`, `nightly`).
+    static let updateChannelKey = "updateChannel"
+    /// Whether pre-release (beta/nightly) updates are offered.
+    static let receiveBetaUpdatesKey = "receiveBetaUpdates"
 }
 
 /// Applies the Dock-icon preference by switching the process activation policy.

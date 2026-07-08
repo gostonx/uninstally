@@ -5,6 +5,7 @@ import SwiftUI
 /// onboarding on first launch.
 struct RootView: View {
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(UpdateManager.self) private var updateManager
     @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
 
     var body: some View {
@@ -28,6 +29,13 @@ struct RootView: View {
         .background(VibrantBackground())
         .sheet(isPresented: showOnboarding) {
             OnboardingView { hasOnboarded = true }
+        }
+        .task {
+            // Check for updates on launch (standalone sessions only), in addition
+            // to Sparkle's own scheduled 24-hour checks.
+            if !coordinator.launchedFromFinder {
+                updateManager.checkForUpdatesInBackground()
+            }
         }
     }
 

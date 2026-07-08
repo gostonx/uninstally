@@ -7,17 +7,20 @@ enum SidebarItem: Hashable {
     case homebrew
 }
 
-/// The standalone experience: a source-list sidebar of smart filters and tools,
-/// with a detail pane that shows the application browser, leftover scanner or
-/// Homebrew manager.
+/// The standalone experience: a customisable source-list sidebar of smart filters
+/// (plus static tools), with a detail pane that shows the application browser,
+/// leftover scanner or Homebrew manager. Sidebar order, visibility, pinned
+/// favourites and collapsed state are owned by `AppSidebarManager`.
 struct MainWindowView: View {
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(AppSidebarManager.self) private var sidebarManager
     @State private var selection: SidebarItem? = .filter(.all)
+    @State private var showCustomize = false
+
+    private var browser: AppBrowserModel { coordinator.browserModel }
 
     var body: some View {
-        @Bindable var browser = coordinator.browserModel
-
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: columnVisibility) {
             sidebar
                 .navigationSplitViewColumnWidth(min: 220, ideal: 240, max: 300)
         } detail: {
@@ -30,30 +33,33 @@ struct MainWindowView: View {
         .onChange(of: selection) { _, _ in
             HapticManager.shared.sectionChanged()
         }
+        .sheet(isPresented: $showCustomize) {
+            CustomizeAppSidebarView(manager: sidebarManager, browser: browser)
+        }
+    }
+
+    private var columnVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { sidebarManager.isCollapsed ? .detailOnly : .all },
+            set: { sidebarManager.isCollapsed = ($0 == .detailOnly) }
+        )
     }
 
     // MARK: - Sidebar
 
     private var sidebar: some View {
-        @Bindable var browser = coordinator.browserModel
-
-        return List(selection: $selection) {
-            Section("Applications") {
-                ForEach(SmartFilter.allCases) { filter in
-                    Label {
-                        HStack {
-                            Text(filter.rawValue)
-                            Spacer()
-                            Text("\(browser.count(for: filter))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    } icon: {
-                        Image(systemName: filter.systemImage)
-                            .foregroundStyle(filter == .brokenInstalls ? .orange : Color.accentColor)
+        List(selection: $selection) {
+            if sidebarManager.hasPinned {
+                Section("Favorites") {
+                    ForEach(sidebarManager.pinnedVisibleItems) { item in
+                        filterRow(item.filter)
                     }
-                    .tag(SidebarItem.filter(filter))
+                }
+            }
+
+            Section("Applications") {
+                ForEach(sidebarManager.unpinnedVisibleItems) { item in
+                    filterRow(item.filter)
                 }
             }
 
@@ -65,8 +71,37 @@ struct MainWindowView: View {
             }
         }
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .top) {
-            brandHeader
+        .safeAreaInset(edge: .top) { brandHeader }
+        .safeAreaInset(edge: .bottom) { customizeBar }
+    }
+
+    private func filterRow(_ filter: SmartFilter) -> some View {
+        Label {
+            HStack {
+                Text(filter.rawValue)
+                Spacer()
+                Text("\(browser.count(for: filter))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        } icon: {
+            Image(systemName: filter.systemImage)
+                .foregroundStyle(filter == .brokenInstalls ? .orange : Color.accentColor)
+        }
+        .tag(SidebarItem.filter(filter))
+        .contextMenu {
+            Button(sidebarManager.isPinned(filter) ? "Unpin from Top" : "Pin to Top",
+                   systemImage: sidebarManager.isPinned(filter) ? "pin.slash" : "pin") {
+                sidebarManager.togglePin(filter.id)
+            }
+            Button("Hide from Sidebar", systemImage: "eye.slash") {
+                sidebarManager.setVisible(filter.id, false)
+            }
+            Divider()
+            Button("Customize Sidebar…", systemImage: "slider.horizontal.3") {
+                showCustomize = true
+            }
         }
     }
 
@@ -94,6 +129,25 @@ struct MainWindowView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+        .background(.bar)
+    }
+
+    private var customizeBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Button {
+                showCustomize = true
+            } label: {
+                Label("Customize Sidebar…", systemImage: "slider.horizontal.3")
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .help("Reorder, pin, or hide sidebar sections")
+        }
         .background(.bar)
     }
 

@@ -55,7 +55,7 @@ enum BrowserLayout: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// Curated collections surfaced as smart filters in the browser sidebar.
-enum SmartFilter: String, CaseIterable, Identifiable, Sendable {
+enum SmartFilter: String, CaseIterable, Identifiable, Codable, Sendable {
     case all = "All Applications"
     case largest = "Largest"
     case recentlyInstalled = "Recently Installed"
