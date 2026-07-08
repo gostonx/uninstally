@@ -47,6 +47,53 @@ with SwiftUI and Apple's native frameworks (no Electron, no web tech).
 
 ---
 
+## Install
+
+### Homebrew (recommended)
+
+```sh
+brew install --cask gostonx/tap/uninstally
+```
+
+Or tap first, then install:
+
+```sh
+brew tap gostonx/tap
+brew install --cask uninstally
+```
+
+Update or remove later:
+
+```sh
+brew upgrade --cask uninstally     # update to the newest release
+brew uninstall --cask uninstally   # remove the app
+brew uninstall --cask --zap uninstally   # remove the app and its leftover files
+```
+
+### Direct download
+
+Grab the latest **`Uninstally.dmg`** from the
+[Releases page](https://github.com/gostonx/uninstally/releases/latest), open it,
+and drag **Uninstally** into your **Applications** folder.
+
+### First launch (unsigned build)
+
+Uninstally is currently ad-hoc signed and not notarized, so macOS Gatekeeper may
+block the first launch. Either **right-click the app → Open** and confirm, or
+clear the quarantine flag:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Uninstally.app
+```
+
+(With Homebrew you can also install without quarantine:
+`brew install --cask --no-quarantine gostonx/tap/uninstally`.)
+
+Then enable the Finder menu item in **System Settings → General → Login Items &
+Extensions → Finder Extensions**.
+
+---
+
 ## Requirements
 
 - macOS 14.0 or later (built and verified against the macOS 26 SDK / Xcode 26)
