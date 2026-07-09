@@ -14,12 +14,22 @@ final class BatchUninstallModel {
     private(set) var currentApp: AppInfo?
     private(set) var progress: UninstallProgress?
     private(set) var results: [UninstallResult] = []
+    /// Per-app outcomes with pre-captured icon data, for recording history.
+    private(set) var completedRecords: [(app: AppInfo, result: UninstallResult, icon: Data?)] = []
 
     private let scanner = AssociatedFileScanner()
     private let engine = UninstallEngine()
+    private let mode = DeletionMode.stored
+    /// Icons captured up front, before any bundle is removed.
+    private let icons: [AppInfo.ID: Data]
 
     init(apps: [AppInfo]) {
         self.apps = apps
+        var captured: [AppInfo.ID: Data] = [:]
+        for app in apps {
+            captured[app.id] = IconLoader.shared.pngData(for: app.url)
+        }
+        self.icons = captured
     }
 
     var totalEstimatedBytes: Int64 {
@@ -41,18 +51,21 @@ final class BatchUninstallModel {
         return min(base + inner, 1)
     }
 
+    var deletionMode: DeletionMode { mode }
+
     func run() async {
         phase = .running
         for (index, app) in apps.enumerated() {
             currentIndex = index
             currentApp = app
             let plan = await scanner.makePlan(for: app)
-            for await event in engine.run(plan: plan, mode: DeletionMode.stored) {
+            for await event in engine.run(plan: plan, mode: mode) {
                 switch event {
                 case .progress(let progress):
                     self.progress = progress
                 case .finished(let result):
                     results.append(result)
+                    completedRecords.append((app, result, icons[app.id]))
                 }
             }
         }

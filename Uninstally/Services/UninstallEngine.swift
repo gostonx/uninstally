@@ -54,6 +54,7 @@ struct UninstallEngine: Sendable {
         var completed = 0
         var bytesRemoved: Int64 = 0
         var failures: [FailedRemoval] = []
+        var trashedAppURL: URL?
 
         func emitProgress(currentPath: String) {
             let fraction = totalBytes > 0
@@ -84,7 +85,11 @@ struct UninstallEngine: Sendable {
             do {
                 switch mode {
                 case .trash:
-                    try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+                    var resulting: NSURL?
+                    try FileManager.default.trashItem(at: item.url, resultingItemURL: &resulting)
+                    if item.category == .application {
+                        trashedAppURL = resulting as URL?
+                    }
                 case .permanent:
                     try FileManager.default.removeItem(at: item.url)
                 }
@@ -127,7 +132,8 @@ struct UninstallEngine: Sendable {
             reclaimedBytes: bytesRemoved,
             removedFileCount: completed,
             duration: Date().timeIntervalSince(start),
-            failures: failures
+            failures: failures,
+            trashedAppURL: trashedAppURL
         )
 
         // Nudge Finder / Launch Services so the removed app disappears from open

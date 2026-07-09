@@ -1,9 +1,11 @@
 import SwiftUI
+import SwiftData
 
 /// Sidebar destinations in the standalone window.
 enum SidebarItem: Hashable {
     case filter(SmartFilter)
     case customTab(UUID)
+    case recentlyUninstalled
     case leftovers
     case homebrew
 }
@@ -17,6 +19,8 @@ struct MainWindowView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(AppSidebarManager.self) private var sidebarManager
     @Environment(CustomTabManager.self) private var collections
+    @AppStorage(AppSettings.showRecentlyUninstalledKey) private var showRecentlyUninstalled = true
+    @Query private var historyRecords: [UninstallRecord]
     @State private var selection: SidebarItem? = .filter(.all)
     @State private var showCustomize = false
     @State private var renamingTabID: UUID?
@@ -97,6 +101,31 @@ struct MainWindowView: View {
             }
 
             Section("Tools") {
+                if showRecentlyUninstalled {
+                    Label {
+                        HStack {
+                            Text("Recently Uninstalled")
+                            Spacer()
+                            Text("\(historyRecords.count)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    } icon: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .tag(SidebarItem.recentlyUninstalled)
+                    .contextMenu {
+                        Button("Hide from Sidebar", systemImage: "eye.slash") {
+                            if selection == .recentlyUninstalled { selection = .filter(.all) }
+                            showRecentlyUninstalled = false
+                        }
+                        Button("Customize Sidebar…", systemImage: "slider.horizontal.3") {
+                            showCustomize = true
+                        }
+                    }
+                }
                 Label("Leftover Scanner", systemImage: "trash.slash.fill")
                     .tag(SidebarItem.leftovers)
                 Label("Homebrew", systemImage: "mug.fill")
@@ -231,6 +260,8 @@ struct MainWindowView: View {
             LeftoverScannerView()
         case .homebrew:
             HomebrewView()
+        case .recentlyUninstalled:
+            RecentlyUninstalledView()
         case nil:
             ContentUnavailableView("Select a Category", systemImage: "sidebar.left")
         }

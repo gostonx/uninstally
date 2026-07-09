@@ -122,13 +122,24 @@ private struct AppearanceContent: View {
 // MARK: - Uninstall Settings
 
 private struct UninstallContent: View {
+    @Environment(HistoryStore.self) private var history
     @AppStorage(AppSettings.deletionModeKey) private var deletionModeRaw = DeletionMode.trash.rawValue
     @AppStorage(AppSettings.quitAfterFinderKey) private var quitAfterFinder = true
+    @AppStorage(AppSettings.keepHistoryKey) private var keepHistory = true
+    @AppStorage(AppSettings.historyRetentionKey) private var retentionRaw = HistoryRetention.forever.rawValue
+    @State private var showClearConfirm = false
 
     private var deletionMode: Binding<DeletionMode> {
         Binding(
             get: { DeletionMode(rawValue: deletionModeRaw) ?? .trash },
             set: { deletionModeRaw = $0.rawValue }
+        )
+    }
+
+    private var retention: Binding<HistoryRetention> {
+        Binding(
+            get: { HistoryRetention(rawValue: retentionRaw) ?? .forever },
+            set: { retentionRaw = $0.rawValue; history.prune() }
         )
     }
 
@@ -153,6 +164,57 @@ private struct UninstallContent: View {
                 )
             }
             .padding(.top, 6)
+
+            Text("Uninstall History")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 2)
+                .padding(.top, 8)
+
+            SettingsCard {
+                SettingsToggleRow(
+                    title: "Keep Uninstall History",
+                    subtitle: "Record apps you remove so you can review or restore them from Recently Uninstalled.",
+                    isOn: $keepHistory
+                )
+                RowDivider()
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("History Retention")
+                        Text("Automatically remove entries older than this.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Picker("History Retention", selection: retention) {
+                        ForEach(HistoryRetention.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                    .disabled(!keepHistory)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                RowDivider()
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Clear History")
+                        Text("Remove every entry from the uninstall history.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Button("Clear…", role: .destructive) { showClearConfirm = true }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            }
+            .confirmationDialog("Clear all uninstall history?", isPresented: $showClearConfirm, titleVisibility: .visible) {
+                Button("Clear History", role: .destructive) { history.clear() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently removes every entry. It does not affect files already in the Trash.")
+            }
         }
     }
 }

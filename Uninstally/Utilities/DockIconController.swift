@@ -14,6 +14,15 @@ enum AppSettings {
     /// Quit automatically after a Finder-initiated uninstall completes.
     static let quitAfterFinderKey = "quitAfterFinderUninstall"
 
+    // MARK: History
+
+    /// Whether uninstall history is recorded. Defaults to `true`.
+    static let keepHistoryKey = "keepUninstallHistory"
+    /// How long history is retained (see `HistoryRetention`).
+    static let historyRetentionKey = "historyRetention"
+    /// Whether the Recently Uninstalled item appears in the sidebar. Defaults `true`.
+    static let showRecentlyUninstalledKey = "showRecentlyUninstalled"
+
     // MARK: Scanning
 
     /// Include system-level `/Library` locations when scanning (needs admin to remove).

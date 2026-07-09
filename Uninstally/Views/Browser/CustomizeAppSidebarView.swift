@@ -67,16 +67,25 @@ struct CustomizeAppSidebarView: View {
         @Bindable var manager = manager
         return VStack(spacing: 0) {
             List {
-                ForEach($manager.items) { $item in
-                    AppSidebarCustomizeRow(
-                        item: $item,
-                        count: browser.count(for: item.filter),
-                        manager: manager
-                    )
-                    .listRowSeparator(.visible)
+                Section {
+                    ForEach($manager.items) { $item in
+                        AppSidebarCustomizeRow(
+                            item: $item,
+                            count: browser.count(for: item.filter),
+                            manager: manager
+                        )
+                        .listRowSeparator(.visible)
+                    }
+                    .onMove { indices, newOffset in
+                        manager.move(fromOffsets: indices, toOffset: newOffset)
+                    }
                 }
-                .onMove { indices, newOffset in
-                    manager.move(fromOffsets: indices, toOffset: newOffset)
+                Section("Tools") {
+                    ToolVisibilityRow(
+                        title: "Recently Uninstalled",
+                        systemImage: "clock.arrow.circlepath",
+                        key: AppSettings.showRecentlyUninstalledKey
+                    )
                 }
             }
             .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -255,5 +264,34 @@ private struct CollectionCustomizeRow: View {
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+    }
+}
+
+/// A show/hide toggle row for a fixed Tools sidebar item.
+private struct ToolVisibilityRow: View {
+    let title: String
+    let systemImage: String
+    @AppStorage private var isVisible: Bool
+
+    init(title: String, systemImage: String, key: String) {
+        self.title = title
+        self.systemImage = systemImage
+        _isVisible = AppStorage(wrappedValue: true, key)
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 22)
+            Text(title)
+            Spacer(minLength: 8)
+            Toggle("", isOn: $isVisible)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .accessibilityLabel("Show \(title)")
+        }
+        .padding(.vertical, 4)
     }
 }

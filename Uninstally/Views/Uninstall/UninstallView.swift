@@ -5,6 +5,7 @@ import SwiftUI
 struct UninstallView: View {
     @Bindable var model: UninstallModel
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(HistoryStore.self) private var history
 
     var body: some View {
         ZStack {
@@ -39,6 +40,10 @@ struct UninstallView: View {
         .task { await model.scan() }
         .onChange(of: model.phase) { _, phase in
             if phase == .finished {
+                if let result = model.result {
+                    history.record(app: model.app, result: result,
+                                   mode: model.deletionMode, iconData: model.iconData)
+                }
                 coordinator.uninstallDidFinish(dedicated: model.isDedicatedSession)
             }
         }

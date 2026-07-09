@@ -4,6 +4,25 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.5.0] — 2026-07-09
+
+### Added
+- **Recently Uninstalled** — a new sidebar section showing an uninstall history of
+  apps you removed with Uninstally (with a live count). Stored locally with
+  SwiftData; nothing is uploaded and no analytics are collected.
+  - Each entry records the app name, icon, developer, version, bundle identifier,
+    original location, date/time, files removed, storage recovered, and deletion
+    method (Trash or Permanent).
+  - **Statistics** at the top: total apps uninstalled, total storage recovered,
+    last uninstall, and average space recovered.
+  - **Search** by app name, developer or bundle identifier, and **filters** for
+    Today, Last 7 Days, Last 30 Days, All Time, Trash, and Permanent Delete.
+  - **Actions**: Restore from Trash (when the item is still in the Trash), View
+    Details, Reveal Original Location, Remove From History, and Clear History.
+  - Hide or show the section from the sidebar customization.
+- **History settings** — Keep Uninstall History (on by default), History Retention
+  (30 Days / 90 Days / 1 Year / Forever), and Clear History.
+
 ## [1.4.5] — 2026-07-09
 
 ### Added
@@ -140,6 +159,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.5.0]: https://github.com/gostonx/uninstally/releases/tag/v1.5.0
 [1.4.5]: https://github.com/gostonx/uninstally/releases/tag/v1.4.5
 [1.4.4]: https://github.com/gostonx/uninstally/releases/tag/v1.4.4
 [1.4.3]: https://github.com/gostonx/uninstally/releases/tag/v1.4.3

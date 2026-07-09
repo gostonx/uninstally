@@ -13,6 +13,7 @@ struct UninstallyApp: App {
     @State private var appSidebarManager = AppSidebarManager()
     @State private var customTabManager = CustomTabManager()
     @State private var updateManager = UpdateManager()
+    @State private var historyStore = HistoryStore()
 
     var body: some Scene {
         WindowGroup {
@@ -21,9 +22,14 @@ struct UninstallyApp: App {
                 .environment(appSidebarManager)
                 .environment(customTabManager)
                 .environment(updateManager)
+                .environment(historyStore)
                 .onOpenURL { coordinator.open($0) }
-                .onAppear { appDelegate.attach(coordinator) }
+                .onAppear {
+                    appDelegate.attach(coordinator)
+                    historyStore.prune()
+                }
         }
+        .modelContainer(historyStore.container)
         .windowToolbarStyle(.unified)
         .windowResizability(.contentMinSize)
         .defaultSize(width: 1000, height: 680)
@@ -41,6 +47,8 @@ struct UninstallyApp: App {
         Settings {
             SettingsView()
                 .environment(updateManager)
+                .environment(historyStore)
         }
+        .modelContainer(historyStore.container)
     }
 }

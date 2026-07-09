@@ -6,6 +6,7 @@ import SwiftUI
 struct BatchUninstallView: View {
     @Bindable var model: BatchUninstallModel
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(HistoryStore.self) private var history
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,6 +17,13 @@ struct BatchUninstallView: View {
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.phase)
+        .onChange(of: model.phase) { _, phase in
+            guard phase == .finished else { return }
+            for entry in model.completedRecords {
+                history.record(app: entry.app, result: entry.result,
+                               mode: model.deletionMode, iconData: entry.icon)
+            }
+        }
     }
 
     // MARK: - Review

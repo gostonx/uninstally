@@ -34,7 +34,12 @@ final class UninstallModel {
     init(app: AppInfo, isDedicatedSession: Bool) {
         self.app = app
         self.isDedicatedSession = isDedicatedSession
+        // Capture the icon now, while the bundle still exists, for the history.
+        self.iconData = IconLoader.shared.pngData(for: app.url)
     }
+
+    /// PNG snapshot of the app icon, captured before removal for the history.
+    private(set) var iconData: Data?
 
     // MARK: - Scanning
 

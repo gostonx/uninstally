@@ -34,6 +34,26 @@ final class IconLoader {
         NSImage(systemSymbolName: category.systemImage, accessibilityDescription: category.title)
             ?? NSImage()
     }
+
+    /// Captures a PNG snapshot of a file's icon, for storing in uninstall history
+    /// (the bundle may be deleted afterward). Called while the bundle still exists.
+    func pngData(for url: URL, size: CGFloat = 128) -> Data? {
+        let image = NSWorkspace.shared.icon(forFile: url.path)
+        let target = NSSize(width: size, height: size)
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: Int(size), pixelsHigh: Int(size),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ) else { return nil }
+        rep.size = target
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        image.draw(in: NSRect(origin: .zero, size: target),
+                   from: .zero, operation: .sourceOver, fraction: 1)
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.representation(using: .png, properties: [:])
+    }
 }
 
 /// A SwiftUI view that renders an application's icon, resolving it lazily.
