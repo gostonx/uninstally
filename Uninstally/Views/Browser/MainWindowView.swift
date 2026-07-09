@@ -3,17 +3,20 @@ import SwiftUI
 /// Sidebar destinations in the standalone window.
 enum SidebarItem: Hashable {
     case filter(SmartFilter)
+    case customTab(UUID)
     case leftovers
     case homebrew
 }
 
-/// The standalone experience: a customisable source-list sidebar of smart filters
-/// (plus static tools), with a detail pane that shows the application browser,
-/// leftover scanner or Homebrew manager. Sidebar order, visibility, pinned
-/// favourites and collapsed state are owned by `AppSidebarManager`.
+/// The standalone experience: a customisable source-list sidebar of smart filters,
+/// user-created Collections, and static tools, with a detail pane that shows the
+/// application browser, leftover scanner or Homebrew manager. Sidebar order,
+/// visibility, pinned favourites and collapsed state are owned by
+/// `AppSidebarManager`; Collections by `CustomTabManager`.
 struct MainWindowView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(AppSidebarManager.self) private var sidebarManager
+    @Environment(CustomTabManager.self) private var collections
     @State private var selection: SidebarItem? = .filter(.all)
     @State private var showCustomize = false
 
@@ -29,12 +32,13 @@ struct MainWindowView: View {
         }
         .task {
             if browser.apps.isEmpty { await browser.load() }
+            collections.prune(installedKeys: browser.installedKeys)
         }
         .onChange(of: selection) { _, _ in
             HapticManager.shared.sectionChanged()
         }
         .sheet(isPresented: $showCustomize) {
-            CustomizeAppSidebarView(manager: sidebarManager, browser: browser)
+            CustomizeAppSidebarView(manager: sidebarManager, collections: collections, browser: browser)
         }
     }
 
@@ -61,6 +65,21 @@ struct MainWindowView: View {
                 ForEach(sidebarManager.unpinnedVisibleItems) { item in
                     filterRow(item.filter)
                 }
+            }
+
+            Section {
+                ForEach(collections.tabs) { tab in
+                    collectionRow(tab)
+                }
+                Button {
+                    createCollection()
+                } label: {
+                    Label("New Collection", systemImage: "plus")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            } header: {
+                Text("Collections")
             }
 
             Section("Tools") {
@@ -101,6 +120,37 @@ struct MainWindowView: View {
             Divider()
             Button("Customize Sidebar…", systemImage: "slider.horizontal.3") {
                 showCustomize = true
+            }
+        }
+    }
+
+    private func collectionRow(_ tab: CustomTab) -> some View {
+        Label {
+            HStack {
+                Text(tab.displayName)
+                Spacer()
+                Text("\(browser.count(inCollection: tab))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        } icon: {
+            Image(systemName: tab.symbol)
+                .foregroundStyle(Color.accentColor)
+        }
+        .tag(SidebarItem.customTab(tab.id))
+        .dropDestination(for: String.self) { keys, _ in
+            collections.add(keys, to: tab.id)
+            return true
+        }
+        .contextMenu {
+            Button("Customize Collections…", systemImage: "slider.horizontal.3") {
+                showCustomize = true
+            }
+            Divider()
+            Button("Delete Collection", systemImage: "trash", role: .destructive) {
+                if selection == .customTab(tab.id) { selection = .filter(.all) }
+                collections.delete(tab.id)
             }
         }
     }
@@ -146,9 +196,14 @@ struct MainWindowView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
-            .help("Reorder, pin, or hide sidebar sections")
+            .help("Reorder or hide sidebar sections and manage Collections")
         }
         .background(.bar)
+    }
+
+    private func createCollection() {
+        let tab = collections.createTab(name: "New Collection")
+        selection = .customTab(tab.id)
     }
 
     // MARK: - Detail
@@ -157,7 +212,13 @@ struct MainWindowView: View {
     private var detail: some View {
         switch selection {
         case .filter(let filter):
-            AppBrowserView(filter: filter)
+            AppBrowserView(scope: .filter(filter))
+        case .customTab(let id):
+            if let tab = collections.tab(id: id) {
+                AppBrowserView(scope: .collection(tab))
+            } else {
+                ContentUnavailableView("Collection Not Found", systemImage: "folder.badge.questionmark")
+            }
         case .leftovers:
             LeftoverScannerView()
         case .homebrew:

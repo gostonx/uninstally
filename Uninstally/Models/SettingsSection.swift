@@ -2,10 +2,10 @@ import Foundation
 
 /// The catalogue of Settings sections shown on the single Settings page.
 ///
-/// Every case always exists as a section on the page; the sidebar (see
-/// `SidebarManager`) only controls which sections appear in the navigation list
-/// and in what order. This type owns the display metadata (title, icon, subtitle)
-/// so the UI never hard-codes strings.
+/// Every case is rendered as a section on the page, in declaration order. The
+/// sidebar is a fixed table of contents used purely to scroll to a section. This
+/// type owns the display metadata (title, icon, subtitle) so the UI never
+/// hard-codes strings.
 enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case general
     case updates

@@ -59,4 +59,11 @@ struct AppInfo: Identifiable, Hashable, Sendable {
             with: "~"
         )
     }
+
+    /// A stable key used for Collection membership. Prefers the bundle identifier
+    /// (survives the app moving on disk); falls back to the path for malformed
+    /// bundles without one.
+    var collectionKey: String {
+        bundleIdentifier.isEmpty ? url.standardizedFileURL.path : bundleIdentifier
+    }
 }

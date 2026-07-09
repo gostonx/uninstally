@@ -10,10 +10,6 @@ enum AppSettings {
     /// Whether subtle trackpad haptic feedback is enabled. Defaults to `true`.
     static let hapticsEnabledKey = "hapticsEnabled"
 
-    /// JSON-encoded array of `SidebarItemConfig` describing the Settings sidebar
-    /// order and visibility.
-    static let settingsSidebarKey = "settingsSidebarConfiguration"
-
     // MARK: Uninstall
 
     /// Move removed user files to the Trash (recoverable) rather than deleting.
@@ -40,6 +36,8 @@ enum AppSettings {
     static let appSidebarKey = "appSidebarConfiguration"
     /// Whether the main Applications sidebar is collapsed.
     static let appSidebarCollapsedKey = "appSidebarCollapsed"
+    /// JSON-encoded array of `CustomTab` (user-created Collections).
+    static let customTabsKey = "customCollections"
 
     // MARK: Updates
 

@@ -213,20 +213,20 @@ private struct SecurityContent: View {
 // MARK: - Advanced
 
 private struct AdvancedContent: View {
-    @Environment(SidebarManager.self) private var sidebar
+    @AppStorage(AppSettings.hapticsEnabledKey) private var haptics = true
     @State private var didReset = false
 
     var body: some View {
         SettingsCard {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Reset Sidebar Layout")
-                    Text("Restore the default section order and visibility.")
+                    Text("Reset All Preferences")
+                    Text("Restore Uninstally's settings, sidebar layout and collections to their defaults. Takes effect on next launch.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
                 Button("Reset") {
-                    sidebar.reset()
+                    resetAll()
                     withAnimation { didReset = true }
                 }
             }
@@ -235,7 +235,7 @@ private struct AdvancedContent: View {
 
             if didReset {
                 RowDivider()
-                Label("Sidebar restored to defaults.", systemImage: "checkmark.circle.fill")
+                Label("Preferences reset. Relaunch to see all changes.", systemImage: "checkmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.green)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -244,6 +244,27 @@ private struct AdvancedContent: View {
                     .transition(.opacity)
             }
         }
+    }
+
+    private func resetAll() {
+        let defaults = UserDefaults.standard
+        for key in [
+            AppSettings.showDockIconKey,
+            AppSettings.hapticsEnabledKey,
+            AppSettings.uninstallMoveToTrashKey,
+            AppSettings.quitAfterFinderKey,
+            AppSettings.scanSystemLevelKey,
+            AppSettings.autoScanLeftoversKey,
+            AppSettings.requireConfirmationKey,
+            AppSettings.appSidebarKey,
+            AppSettings.appSidebarCollapsedKey,
+            AppSettings.customTabsKey,
+            AppSettings.updateChannelKey,
+            AppSettings.receiveBetaUpdatesKey,
+        ] {
+            defaults.removeObject(forKey: key)
+        }
+        haptics = true
     }
 }
 

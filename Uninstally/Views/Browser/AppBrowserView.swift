@@ -3,11 +3,18 @@ import SwiftUI
 /// The application browser detail pane. Presents installed apps as a grid or list,
 /// with search, sort, multi-select batch uninstall and drag-and-drop support.
 struct AppBrowserView: View {
-    let filter: SmartFilter
+    let scope: BrowserScope
     @Environment(AppCoordinator.self) private var coordinator
     @State private var isSelecting = false
 
     private var model: AppBrowserModel { coordinator.browserModel }
+
+    /// The Collection currently being viewed, if any (enables "Remove from
+    /// Collection" affordances on app cells).
+    private var currentCollectionID: UUID? {
+        if case .collection(let tab) = scope { return tab.id }
+        return nil
+    }
 
     var body: some View {
         @Bindable var model = coordinator.browserModel
@@ -21,11 +28,11 @@ struct AppBrowserView: View {
                 content
             }
         }
-        .navigationTitle(filter.rawValue)
+        .navigationTitle(scope.title)
         .searchable(text: $model.searchText, placement: .toolbar, prompt: "Search applications")
-        .onAppear { model.filter = filter }
-        .onChange(of: filter) { _, newValue in
-            model.filter = newValue
+        .onAppear { model.scope = scope }
+        .onChange(of: scope) { _, newValue in
+            model.scope = newValue
             model.selection.removeAll()
         }
         .toolbar { toolbarContent }
@@ -59,7 +66,8 @@ struct AppBrowserView: View {
                     AppGridCell(
                         app: app,
                         isSelecting: isSelecting,
-                        isSelected: model.selection.contains(app.id)
+                        isSelected: model.selection.contains(app.id),
+                        collectionID: currentCollectionID
                     )
                     .onTapGesture { handleTap(app) }
                 }
@@ -74,7 +82,8 @@ struct AppBrowserView: View {
                 AppListRow(
                     app: app,
                     isSelecting: isSelecting,
-                    isSelected: model.selection.contains(app.id)
+                    isSelected: model.selection.contains(app.id),
+                    collectionID: currentCollectionID
                 )
                 .contentShape(Rectangle())
                 .onTapGesture { handleTap(app) }
@@ -100,12 +109,25 @@ struct AppBrowserView: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("No Applications", systemImage: filter.systemImage)
+            Label(emptyTitle, systemImage: scope.systemImage)
         } description: {
-            Text(model.searchText.isEmpty
-                 ? "Nothing matches this filter."
-                 : "No applications match “\(model.searchText)”.")
+            Text(emptyMessage)
         }
+    }
+
+    private var emptyTitle: String {
+        if case .collection = scope { return "Empty Collection" }
+        return "No Applications"
+    }
+
+    private var emptyMessage: String {
+        if !model.searchText.isEmpty {
+            return "No applications match “\(model.searchText)”."
+        }
+        if case .collection = scope {
+            return "Drag apps here from another view, or right-click an app and choose “Add to Collection”."
+        }
+        return "Nothing matches this filter."
     }
 
     // MARK: - Toolbar

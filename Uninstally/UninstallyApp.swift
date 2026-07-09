@@ -10,8 +10,8 @@ import SwiftUI
 struct UninstallyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var coordinator = AppCoordinator()
-    @State private var sidebarManager = SidebarManager()
     @State private var appSidebarManager = AppSidebarManager()
+    @State private var customTabManager = CustomTabManager()
     @State private var updateManager = UpdateManager()
 
     var body: some Scene {
@@ -19,6 +19,7 @@ struct UninstallyApp: App {
             RootView()
                 .environment(coordinator)
                 .environment(appSidebarManager)
+                .environment(customTabManager)
                 .environment(updateManager)
                 .onOpenURL { coordinator.open($0) }
                 .onAppear { appDelegate.attach(coordinator) }
@@ -38,7 +39,6 @@ struct UninstallyApp: App {
 
         Settings {
             SettingsView()
-                .environment(sidebarManager)
                 .environment(updateManager)
         }
     }

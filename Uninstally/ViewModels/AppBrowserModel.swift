@@ -2,6 +2,27 @@ import Foundation
 import Observation
 import os
 
+/// What the application browser is currently showing: a built-in smart filter or
+/// a user-created Collection.
+enum BrowserScope: Hashable {
+    case filter(SmartFilter)
+    case collection(CustomTab)
+
+    var title: String {
+        switch self {
+        case .filter(let f): return f.rawValue
+        case .collection(let tab): return tab.displayName
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .filter(let f): return f.systemImage
+        case .collection(let tab): return tab.symbol
+        }
+    }
+}
+
 /// Drives the standalone application browser: scanning, searching, sorting and
 /// smart filtering. Marked `@MainActor` because it feeds SwiftUI directly; the
 /// heavy scanning work is delegated to the `ApplicationScanner` actor-safe struct.
@@ -15,7 +36,7 @@ final class AppBrowserModel {
     var searchText = ""
     var sort: AppSortOption = .name
     var layout: BrowserLayout = .grid
-    var filter: SmartFilter = .all
+    var scope: BrowserScope = .filter(.all)
     var selection: Set<AppInfo.ID> = []
 
     /// Bundle ids that appear on more than one volume.
@@ -49,9 +70,16 @@ final class AppBrowserModel {
         duplicatedIdentifiers = Set(counts.filter { $0.value > 1 }.keys)
     }
 
-    /// The apps that survive the active smart filter, then search, then sort.
+    /// The apps that survive the active scope, then search, then sort.
     var visibleApps: [AppInfo] {
-        var result = applyFilter(filter, to: apps)
+        var result: [AppInfo]
+        switch scope {
+        case .filter(let filter):
+            result = applyFilter(filter, to: apps)
+        case .collection(let tab):
+            let keys = Set(tab.appKeys)
+            result = apps.filter { keys.contains($0.collectionKey) }
+        }
         if !searchText.isEmpty {
             let query = searchText
             result = result.filter {
@@ -105,5 +133,17 @@ final class AppBrowserModel {
 
     func count(for filter: SmartFilter) -> Int {
         applyFilter(filter, to: apps).count
+    }
+
+    /// Number of installed apps currently filed in a Collection.
+    func count(inCollection tab: CustomTab) -> Int {
+        let keys = Set(tab.appKeys)
+        return apps.filter { keys.contains($0.collectionKey) }.count
+    }
+
+    /// The set of collection keys for every installed app, used to prune
+    /// Collections after uninstalls.
+    var installedKeys: Set<String> {
+        Set(apps.map(\.collectionKey))
     }
 }

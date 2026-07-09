@@ -26,8 +26,8 @@ struct AppSidebarItemConfig: Codable, Identifiable, Hashable, Sendable {
 /// request. Backed by `UserDefaults`, so the layout returns automatically on the
 /// next launch.
 ///
-/// This is separate from the Settings navigation (`SidebarManager`) and only
-/// affects the standalone application window.
+/// This governs the standalone application window's sidebar only; the Settings
+/// window uses a fixed navigation order.
 @MainActor
 @Observable
 final class AppSidebarManager {

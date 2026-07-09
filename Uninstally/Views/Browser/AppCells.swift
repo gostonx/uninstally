@@ -6,6 +6,7 @@ struct AppGridCell: View {
     let app: AppInfo
     var isSelecting: Bool
     var isSelected: Bool
+    var collectionID: UUID?
 
     @State private var isHovering = false
 
@@ -51,7 +52,8 @@ struct AppGridCell: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovering)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         .onHover { isHovering = $0 }
-        .contextMenu { AppContextMenu(app: app) }
+        .draggable(app.collectionKey)
+        .contextMenu { AppContextMenu(app: app, collectionID: collectionID) }
         .help("\(app.name) — \(app.developer.isEmpty ? app.bundleIdentifier : app.developer)")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(app.name), \(Format.bytes(app.sizeBytes))")
@@ -64,6 +66,7 @@ struct AppListRow: View {
     let app: AppInfo
     var isSelecting: Bool
     var isSelected: Bool
+    var collectionID: UUID?
 
     @State private var isHovering = false
 
@@ -107,27 +110,59 @@ struct AppListRow: View {
                 .fill(isSelected ? Color.accentColor.opacity(0.14) : (isHovering ? Color.primary.opacity(0.05) : .clear))
         )
         .onHover { isHovering = $0 }
-        .contextMenu { AppContextMenu(app: app) }
+        .draggable(app.collectionKey)
+        .contextMenu { AppContextMenu(app: app, collectionID: collectionID) }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(app.name), \(Format.bytes(app.sizeBytes)), \(app.developer)")
     }
 }
 
-/// Shared context menu for an application, offering reveal / Quick Look / uninstall.
+/// Shared context menu for an application, offering reveal / Quick Look /
+/// Collection filing / uninstall.
 struct AppContextMenu: View {
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(CustomTabManager.self) private var collections
     let app: AppInfo
+    /// When non-nil, the app is being shown inside this Collection, enabling a
+    /// "Remove from Collection" action.
+    var collectionID: UUID?
 
     var body: some View {
         Button("Uninstall…", systemImage: "trash") {
             coordinator.startUninstall(for: app)
         }
         Divider()
+        collectionMenu
+        Divider()
         Button("Show in Finder", systemImage: "folder") {
             NSWorkspace.shared.activateFileViewerSelecting([app.url])
         }
         Button("Open", systemImage: "arrow.up.forward.app") {
             NSWorkspace.shared.open(app.url)
+        }
+    }
+
+    @ViewBuilder
+    private var collectionMenu: some View {
+        Menu("Add to Collection", systemImage: "folder.badge.plus") {
+            ForEach(collections.tabs) { tab in
+                Button {
+                    collections.add(app.collectionKey, to: tab.id)
+                } label: {
+                    Label(tab.displayName, systemImage: tab.symbol)
+                }
+                .disabled(tab.contains(app.collectionKey))
+            }
+            if !collections.tabs.isEmpty { Divider() }
+            Button("New Collection…", systemImage: "plus") {
+                collections.createTab(name: "New Collection", initialKey: app.collectionKey)
+            }
+        }
+
+        if let collectionID, collections.tab(id: collectionID)?.contains(app.collectionKey) == true {
+            Button("Remove from Collection", systemImage: "folder.badge.minus") {
+                collections.remove(app.collectionKey, from: collectionID)
+            }
         }
     }
 }
