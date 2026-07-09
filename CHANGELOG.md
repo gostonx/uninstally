@@ -4,6 +4,19 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.4.2] — 2026-07-08
+
+### Added
+- **Collections** — create your own tabs in the main sidebar to group and
+  categorize apps. Add apps by dragging them onto a Collection or right-clicking
+  an app → **Add to Collection**. Rename, pick an icon, reorder and delete
+  Collections from the Customize Sidebar sheet. Collections are organizational
+  only and never change what's installed; they persist across launches.
+
+### Changed
+- Sidebar customization now lives in the **main application window** (not
+  Settings). Settings is a single, fixed page again.
+
 ## [1.4.1] — 2026-07-08
 
 ### Fixed
@@ -79,6 +92,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.4.2]: https://github.com/gostonx/uninstally/releases/tag/v1.4.2
 [1.4.1]: https://github.com/gostonx/uninstally/releases/tag/v1.4.1
 [1.4.0]: https://github.com/gostonx/uninstally/releases/tag/v1.4.0
 [1.3.0]: https://github.com/gostonx/uninstally/releases/tag/v1.3.0
