@@ -19,6 +19,8 @@ struct MainWindowView: View {
     @Environment(CustomTabManager.self) private var collections
     @State private var selection: SidebarItem? = .filter(.all)
     @State private var showCustomize = false
+    @State private var renamingTabID: UUID?
+    @State private var renameText = ""
 
     private var browser: AppBrowserModel { coordinator.browserModel }
 
@@ -39,6 +41,21 @@ struct MainWindowView: View {
         }
         .sheet(isPresented: $showCustomize) {
             CustomizeAppSidebarView(manager: sidebarManager, collections: collections, browser: browser)
+        }
+        .alert("Rename Collection", isPresented: Binding(
+            get: { renamingTabID != nil },
+            set: { if !$0 { renamingTabID = nil } }
+        )) {
+            TextField("Name", text: $renameText)
+            Button("Cancel", role: .cancel) { renamingTabID = nil }
+            Button("Rename") {
+                if let id = renamingTabID {
+                    collections.rename(id, to: renameText.trimmingCharacters(in: .whitespacesAndNewlines))
+                }
+                renamingTabID = nil
+            }
+        } message: {
+            Text("Enter a new name for this collection.")
         }
     }
 
@@ -144,6 +161,10 @@ struct MainWindowView: View {
             return true
         }
         .contextMenu {
+            Button("Rename…", systemImage: "pencil") {
+                renameText = tab.displayName
+                renamingTabID = tab.id
+            }
             Button("Customize Collections…", systemImage: "slider.horizontal.3") {
                 showCustomize = true
             }

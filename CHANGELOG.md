@@ -4,14 +4,29 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.4.3] — 2026-07-09
+
+### Added
+- **Rename Collections from the sidebar** — right-click any Collection and choose
+  **Rename…** (renaming is also still available in the Customize Sidebar sheet).
+
 ## [1.4.2] — 2026-07-08
 
 ### Added
 - **Collections** — create your own tabs in the main sidebar to group and
-  categorize apps. Add apps by dragging them onto a Collection or right-clicking
-  an app → **Add to Collection**. Rename, pick an icon, reorder and delete
-  Collections from the Customize Sidebar sheet. Collections are organizational
-  only and never change what's installed; they persist across launches.
+  categorize apps.
+
+  Collections are great for **trying out apps you plan to remove later**: when you
+  download something to test, drop it into a "Trying Out" (or "To Delete")
+  Collection so it doesn't get lost among your everyday apps. When you're done
+  evaluating, open that Collection and uninstall the app — along with all its
+  leftover files — in a couple of clicks. Other handy uses: grouping a project's
+  tools, games, or apps you're deciding whether to keep.
+
+  Add apps by dragging them onto a Collection or right-clicking an app →
+  **Add to Collection**. Rename, pick an icon, reorder and delete Collections from
+  the Customize Sidebar sheet. Collections are organizational only and never
+  change what's installed; they persist across launches.
 
 ### Changed
 - Sidebar customization now lives in the **main application window** (not
@@ -92,6 +107,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.4.3]: https://github.com/gostonx/uninstally/releases/tag/v1.4.3
 [1.4.2]: https://github.com/gostonx/uninstally/releases/tag/v1.4.2
 [1.4.1]: https://github.com/gostonx/uninstally/releases/tag/v1.4.1
 [1.4.0]: https://github.com/gostonx/uninstally/releases/tag/v1.4.0
