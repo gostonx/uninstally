@@ -29,16 +29,18 @@ struct SettingsView: View {
     private let space = "settingsScroll"
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             List(SettingsSection.allCases, selection: $selection) { section in
                 Label(section.title, systemImage: section.systemImage)
                     .tag(section)
             }
             .navigationSplitViewColumnWidth(min: 208, ideal: 220, max: 260)
+            .toolbar(removing: .sidebarToggle)
             .accessibilityLabel("Settings sections")
         } detail: {
             page
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(width: 840, height: 580)
     }
 

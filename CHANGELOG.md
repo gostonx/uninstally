@@ -4,6 +4,12 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.4.4] — 2026-07-09
+
+### Changed
+- The **Settings sidebar now stays visible** and can no longer be collapsed, so
+  the section list is always available while browsing preferences.
+
 ## [1.4.3] — 2026-07-09
 
 ### Added
@@ -107,6 +113,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.4.4]: https://github.com/gostonx/uninstally/releases/tag/v1.4.4
 [1.4.3]: https://github.com/gostonx/uninstally/releases/tag/v1.4.3
 [1.4.2]: https://github.com/gostonx/uninstally/releases/tag/v1.4.2
 [1.4.1]: https://github.com/gostonx/uninstally/releases/tag/v1.4.1
