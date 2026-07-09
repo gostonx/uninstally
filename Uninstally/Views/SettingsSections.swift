@@ -43,6 +43,7 @@ struct SettingsSectionCard: View {
         switch section {
         case .updates: UpdatesContent()
         case .appearance: AppearanceContent()
+        case .language: LanguageContent()
         case .uninstall: UninstallContent()
         case .scanning: ScanningContent()
         case .security: SecurityContent()
@@ -115,6 +116,53 @@ private struct AppearanceContent: View {
             .onChange(of: showDockIcon) { _, newValue in
                 DockIconController.apply(showDockIcon: newValue)
             }
+        }
+    }
+}
+
+// MARK: - Language
+
+private struct LanguageContent: View {
+    @Bindable var manager = LanguageManager.shared
+
+    var body: some View {
+        SettingsCard {
+            ForEach(LanguageManager.supportedLanguages) { language in
+                Button {
+                    manager.selectLanguage(language)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "globe")
+                            .font(.body)
+                            .foregroundStyle(Color.accentColor)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(language.nativeName)
+                            if language.code == LanguageManager.supportedLanguages.first?.code {
+                                Text("Source language — translation ready")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer(minLength: 8)
+                        if manager.current.code == language.code {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(language.nativeName)
+                .accessibilityAddTraits(manager.current.code == language.code ? .isSelected : [])
+            }
+        }
+        .alert("Restart Required", isPresented: $manager.showRestartAlert) {
+            Button("Restart Now") { manager.restartNow() }
+            Button("Later", role: .cancel) {}
+        } message: {
+            Text("The application needs to restart to apply the selected language.")
         }
     }
 }
@@ -261,6 +309,7 @@ private struct DeletionModeRow: View {
 private struct ScanningContent: View {
     @AppStorage(AppSettings.scanSystemLevelKey) private var scanSystem = true
     @AppStorage(AppSettings.autoScanLeftoversKey) private var autoScan = true
+    @AppStorage(AppSettings.monitorTrashKey) private var monitorTrash = true
 
     var body: some View {
         SettingsCard {
@@ -275,6 +324,15 @@ private struct ScanningContent: View {
                 subtitle: "Look for orphaned files from removed apps in the background.",
                 isOn: $autoScan
             )
+            RowDivider()
+            SettingsToggleRow(
+                title: "Monitor Trash for Deleted Applications",
+                subtitle: "When you drag an app to the Trash in Finder, offer to remove its leftover files.",
+                isOn: $monitorTrash
+            )
+            .onChange(of: monitorTrash) { _, _ in
+                NotificationCenter.default.post(name: .trashMonitorPreferenceChanged, object: nil)
+            }
         }
     }
 }

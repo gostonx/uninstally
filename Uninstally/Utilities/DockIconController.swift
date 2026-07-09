@@ -22,6 +22,10 @@ enum AppSettings {
     static let historyRetentionKey = "historyRetention"
     /// Whether the Recently Uninstalled item appears in the sidebar. Defaults `true`.
     static let showRecentlyUninstalledKey = "showRecentlyUninstalled"
+    /// Whether the Storage Insights item appears in the sidebar. Defaults `true`.
+    static let showStorageInsightsKey = "showStorageInsights"
+    /// Whether Uninstally watches the Trash for deleted apps. Defaults `true`.
+    static let monitorTrashKey = "monitorTrash"
 
     // MARK: Scanning
 

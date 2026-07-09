@@ -43,13 +43,17 @@ final class FinderSync: FIFinderSync {
     // MARK: - Action
 
     @objc private func uninstallSelected(_ sender: AnyObject?) {
-        for bundle in selectedAppBundles() {
-            guard var components = URLComponents(string: "uninstally://uninstall") else { continue }
-            components.queryItems = [URLQueryItem(name: "path", value: bundle.path)]
-            guard let url = components.url else { continue }
-            NSWorkspace.shared.open(url)
-            logger.log("Requested uninstall for \(bundle.path, privacy: .public)")
-        }
+        let bundles = selectedAppBundles()
+        guard !bundles.isEmpty else { return }
+
+        // Encode every selected bundle as a repeated `path` query parameter so the
+        // main app receives the full selection in a single URL-open call and can
+        // present its multi‑app chooser.
+        guard var components = URLComponents(string: "uninstally://uninstall") else { return }
+        components.queryItems = bundles.map { URLQueryItem(name: "path", value: $0.path) }
+        guard let url = components.url else { return }
+        NSWorkspace.shared.open(url)
+        logger.log("Requested uninstall for \(bundles.count) bundle(s), first = \(bundles.first?.lastPathComponent ?? "?")")
     }
 
     // MARK: - Helpers

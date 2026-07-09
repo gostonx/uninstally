@@ -1,12 +1,13 @@
 import Foundation
 import Observation
 
-/// Coordinates the uninstall flow for a single application: scanning for
-/// artefacts, letting the user review/deselect them, confirming, then running the
-/// engine while surfacing live progress and a final result.
+/// Coordinates the uninstall flow for a single application: running an uninstall
+/// **simulation** (a non-destructive scan + analysis), letting the user review and
+/// deselect artefacts, confirming, then running the engine on the *already
+/// simulated* plan while surfacing live progress and a final result.
 @MainActor
 @Observable
-final class UninstallModel {
+final class UninstallModel: Identifiable {
 
     enum Phase: Equatable {
         case scanning
@@ -17,10 +18,14 @@ final class UninstallModel {
     }
 
     let app: AppInfo
-    private(set) var plan: UninstallPlan?
+    nonisolated var id: String { app.id }
+
+    private(set) var simulation: SimulationResult?
     private(set) var phase: Phase = .scanning
     private(set) var progress: UninstallProgress?
     private(set) var result: UninstallResult?
+    /// Human-readable step shown while the simulation scans.
+    private(set) var scanStep: String = "Preparing…"
 
     var searchText = ""
 
@@ -28,60 +33,45 @@ final class UninstallModel {
     /// should terminate on completion.
     let isDedicatedSession: Bool
 
-    private let scanner = AssociatedFileScanner()
-    private let engine = UninstallEngine()
+    /// PNG snapshot of the app icon, captured before removal for the history.
+    private(set) var iconData: Data?
+
+    private let simulator = UninstallSimulationManager()
 
     init(app: AppInfo, isDedicatedSession: Bool) {
         self.app = app
         self.isDedicatedSession = isDedicatedSession
-        // Capture the icon now, while the bundle still exists, for the history.
         self.iconData = IconLoader.shared.pngData(for: app.url)
     }
 
-    /// PNG snapshot of the app icon, captured before removal for the history.
-    private(set) var iconData: Data?
-
-    // MARK: - Scanning
+    // MARK: - Simulation
 
     func scan() async {
         phase = .scanning
-        let plan = await scanner.makePlan(for: app)
-        self.plan = plan
+        let result = await simulator.run(for: app) { [weak self] step in
+            self?.scanStep = step
+        }
+        self.simulation = result
         phase = .review
     }
 
-    // MARK: - Selection
+    // MARK: - Selection helpers
 
-    func setSelection(_ id: RemovableItem.ID, isSelected: Bool) {
-        guard var plan else { return }
-        if let index = plan.items.firstIndex(where: { $0.id == id }) {
-            plan.items[index].isSelected = isSelected
-            self.plan = plan
-        }
-    }
-
-    func setSelection(for category: RemovalCategory, isSelected: Bool) {
-        guard var plan else { return }
-        for index in plan.items.indices where plan.items[index].category == category {
-            // The application bundle itself cannot be deselected — removing an app
-            // without its bundle makes no sense.
-            if plan.items[index].category == .application { continue }
-            plan.items[index].isSelected = isSelected
-        }
-        self.plan = plan
-    }
-
-    var filteredGroups: [(category: RemovalCategory, items: [RemovableItem])] {
-        guard let plan else { return [] }
-        guard !searchText.isEmpty else { return plan.groupedItems }
+    /// Categories filtered by the current search text.
+    var filteredCategories: [SimulationCategory] {
+        guard let simulation else { return [] }
+        guard !searchText.isEmpty else { return simulation.categories }
         let query = searchText
-        return plan.groupedItems.compactMap { group in
-            let matches = group.items.filter {
+        return simulation.categories.compactMap { category in
+            let matches = category.files.filter {
                 $0.name.localizedCaseInsensitiveContains(query)
                     || $0.displayPath.localizedCaseInsensitiveContains(query)
-                    || group.category.title.localizedCaseInsensitiveContains(query)
+                    || category.removalCategory.title.localizedCaseInsensitiveContains(query)
+                    || app.bundleIdentifier.localizedCaseInsensitiveContains(query)
             }
-            return matches.isEmpty ? nil : (group.category, matches)
+            guard !matches.isEmpty else { return nil }
+            let filtered = SimulationCategory(removalCategory: category.removalCategory, files: matches)
+            return filtered
         }
     }
 
@@ -90,16 +80,38 @@ final class UninstallModel {
     func requestConfirmation() { phase = .confirming }
     func cancelConfirmation() { phase = .review }
 
+    /// Advances from review, enforcing the "Require Confirmation Before Uninstall"
+    /// preference: when enabled, the confirmation must be accepted; when disabled,
+    /// the uninstall proceeds directly.
+    func proceed() async {
+        if SecurityPreferences.requireConfirmation {
+            phase = .confirming
+        } else {
+            await uninstall()
+        }
+    }
+
+    /// The validated deletion plan for the current selection (no rescan).
+    var deletionPlan: DeletionPlan {
+        let selected = simulation?.asRemovableItems.filter(\.isSelected) ?? []
+        let validator = DeletionValidator(includeSystem: SecurityPreferences.scanSystemLevel)
+        return validator.buildPlan(app: app, items: selected, method: deletionMode)
+    }
+
+    /// Security summary shown before uninstalling.
+    var securitySummary: SecuritySummary { SecuritySummary(plan: deletionPlan) }
+
     // MARK: - Uninstall
 
-    /// The user's current deletion behaviour (Trash vs. permanent), read fresh so
-    /// it always reflects the latest Settings choice.
+    /// The user's current deletion behaviour, read fresh from Settings.
     var deletionMode: DeletionMode { DeletionMode.stored }
 
     func uninstall() async {
-        guard let plan else { return }
+        guard simulation != nil else { return }
+        // Reuse the validated, simulated plan directly — no second scan.
+        let plan = deletionPlan
         phase = .uninstalling
-        for await event in engine.run(plan: plan, mode: deletionMode) {
+        for await event in DeletionExecutor().execute(plan: plan) {
             switch event {
             case .progress(let progress):
                 self.progress = progress

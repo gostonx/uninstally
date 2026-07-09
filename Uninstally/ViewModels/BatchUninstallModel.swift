@@ -18,7 +18,6 @@ final class BatchUninstallModel {
     private(set) var completedRecords: [(app: AppInfo, result: UninstallResult, icon: Data?)] = []
 
     private let scanner = AssociatedFileScanner()
-    private let engine = UninstallEngine()
     private let mode = DeletionMode.stored
     /// Icons captured up front, before any bundle is removed.
     private let icons: [AppInfo.ID: Data]
@@ -55,11 +54,14 @@ final class BatchUninstallModel {
 
     func run() async {
         phase = .running
+        let includeSystem = SecurityPreferences.scanSystemLevel
+        let validator = DeletionValidator(includeSystem: includeSystem)
         for (index, app) in apps.enumerated() {
             currentIndex = index
             currentApp = app
-            let plan = await scanner.makePlan(for: app)
-            for await event in engine.run(plan: plan, mode: mode) {
+            let items = await scanner.scan(for: app, includeSystem: includeSystem)
+            let plan = validator.buildPlan(app: app, items: items, method: mode)
+            for await event in DeletionExecutor().execute(plan: plan) {
                 switch event {
                 case .progress(let progress):
                     self.progress = progress

@@ -9,6 +9,7 @@ import Foundation
 enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
     case updates
     case appearance
+    case language
     case uninstall
     case scanning
     case security
@@ -21,6 +22,7 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
         switch self {
         case .updates: return "Updates"
         case .appearance: return "Appearance"
+        case .language: return "Language"
         case .uninstall: return "Uninstall Settings"
         case .scanning: return "Scanning"
         case .security: return "Security"
@@ -33,6 +35,7 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
         switch self {
         case .updates: return "arrow.triangle.2.circlepath"
         case .appearance: return "paintbrush"
+        case .language: return "globe"
         case .uninstall: return "trash"
         case .scanning: return "magnifyingglass"
         case .security: return "lock.shield"
@@ -46,6 +49,7 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
         switch self {
         case .updates: return "Keep Uninstally up to date."
         case .appearance: return "How Uninstally looks and where it lives."
+        case .language: return "Choose the language used throughout the app."
         case .uninstall: return "What happens when you remove an app."
         case .scanning: return "How thoroughly Uninstally searches for related files."
         case .security: return "Confirmations and safe-removal safeguards."

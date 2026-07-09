@@ -16,13 +16,15 @@ import os
 struct AssociatedFileScanner: Sendable {
 
     /// Produces a full uninstall plan for an application.
-    func makePlan(for app: AppInfo) async -> UninstallPlan {
-        let items = await scan(for: app)
+    func makePlan(for app: AppInfo, includeSystem: Bool = SecurityPreferences.scanSystemLevel) async -> UninstallPlan {
+        let items = await scan(for: app, includeSystem: includeSystem)
         return UninstallPlan(app: app, items: items)
     }
 
-    /// Discovers all removable artefacts for the given application.
-    func scan(for app: AppInfo) async -> [RemovableItem] {
+    /// Discovers all removable artefacts for the given application. When
+    /// `includeSystem` is `false`, system-level `/Library` locations are skipped
+    /// (honouring the "Scan System Level Locations" preference).
+    func scan(for app: AppInfo, includeSystem: Bool = SecurityPreferences.scanSystemLevel) async -> [RemovableItem] {
         await withTaskGroup(of: [RemovableItem].self) { group in
             // The application bundle itself is always present.
             group.addTask { [Self.appBundleItem(app)] }
@@ -32,9 +34,11 @@ struct AssociatedFileScanner: Sendable {
                 group.addTask { Self.matchChildren(in: root, category: category, app: app, admin: false) }
             }
 
-            // System-level category roots (admin required).
-            for (category, root) in LibraryPaths.systemCategoryRoots {
-                group.addTask { Self.matchChildren(in: root, category: category, app: app, admin: true) }
+            // System-level category roots (admin required) — only when enabled.
+            if includeSystem {
+                for (category, root) in LibraryPaths.systemCategoryRoots {
+                    group.addTask { Self.matchChildren(in: root, category: category, app: app, admin: true) }
+                }
             }
 
             // Preferences require special handling (files, ByHost, lockfiles).

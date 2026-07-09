@@ -6,6 +6,7 @@ enum SidebarItem: Hashable {
     case filter(SmartFilter)
     case customTab(UUID)
     case recentlyUninstalled
+    case storageInsights
     case leftovers
     case homebrew
 }
@@ -20,6 +21,7 @@ struct MainWindowView: View {
     @Environment(AppSidebarManager.self) private var sidebarManager
     @Environment(CustomTabManager.self) private var collections
     @AppStorage(AppSettings.showRecentlyUninstalledKey) private var showRecentlyUninstalled = true
+    @AppStorage(AppSettings.showStorageInsightsKey) private var showStorageInsights = true
     @Query private var historyRecords: [UninstallRecord]
     @State private var selection: SidebarItem? = .filter(.all)
     @State private var showCustomize = false
@@ -101,6 +103,16 @@ struct MainWindowView: View {
             }
 
             Section("Tools") {
+                if showStorageInsights {
+                    Label("Storage Insights", systemImage: "chart.pie.fill")
+                        .tag(SidebarItem.storageInsights)
+                        .contextMenu {
+                            Button("Hide from Sidebar", systemImage: "eye.slash") {
+                                if selection == .storageInsights { selection = .filter(.all) }
+                                showStorageInsights = false
+                            }
+                        }
+                }
                 if showRecentlyUninstalled {
                     Label {
                         HStack {
@@ -262,6 +274,8 @@ struct MainWindowView: View {
             HomebrewView()
         case .recentlyUninstalled:
             RecentlyUninstalledView()
+        case .storageInsights:
+            StorageInsightsView()
         case nil:
             ContentUnavailableView("Select a Category", systemImage: "sidebar.left")
         }

@@ -137,6 +137,27 @@ struct AppBrowserView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .automatic) {
+            Button {
+                Task { await model.load() }
+            } label: {
+                if model.isScanning {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Refreshing…")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+            }
+            .disabled(model.isScanning)
+            .help("Refresh the application list")
+            .accessibilityLabel("Refresh Applications")
+        }
+
         ToolbarItem(placement: .primaryAction) {
             Button {
                 withAnimation(.spring) {

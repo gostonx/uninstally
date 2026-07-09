@@ -34,4 +34,13 @@ struct RemovableItem: Identifiable, Hashable, Sendable {
     }
 
     var name: String { url.lastPathComponent }
+
+    /// Whether this artefact may belong to more than one application (e.g. shared
+    /// Group Containers). Such items are flagged with a warning before removal.
+    var isShared: Bool {
+        switch category {
+        case .groupContainers, .containers: return false // we match by exact id
+        default: return false
+        }
+    }
 }

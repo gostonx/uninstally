@@ -7,6 +7,7 @@ struct RootView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(UpdateManager.self) private var updateManager
     @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -22,6 +23,9 @@ struct RootView: View {
             case .batch(let model):
                 BatchUninstallView(model: model)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+            case .finderSelection(let apps):
+                FinderSelectionView(apps: apps)
+                    .transition(.opacity)
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: coordinator.route)
@@ -35,6 +39,13 @@ struct RootView: View {
             // to Sparkle's own scheduled 24-hour checks.
             if !coordinator.launchedFromFinder {
                 updateManager.checkForUpdatesInBackground()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, case .browser = coordinator.route,
+               !coordinator.browserModel.apps.isEmpty,
+               !coordinator.browserModel.isScanning {
+                Task { await coordinator.browserModel.load() }
             }
         }
     }

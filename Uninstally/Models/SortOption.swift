@@ -7,7 +7,6 @@ enum AppSortOption: String, CaseIterable, Identifiable, Sendable {
     case developer = "Developer"
     case installDate = "Install Date"
     case recentlyUsed = "Recently Used"
-    case unused = "Unused"
     case largest = "Largest Apps"
 
     var id: String { rawValue }
@@ -19,7 +18,6 @@ enum AppSortOption: String, CaseIterable, Identifiable, Sendable {
         case .developer: return "person.fill"
         case .installDate: return "calendar"
         case .recentlyUsed: return "clock.fill"
-        case .unused: return "moon.zzz.fill"
         case .largest: return "chart.bar.fill"
         }
     }
@@ -30,7 +28,12 @@ enum AppSortOption: String, CaseIterable, Identifiable, Sendable {
         case .name:
             return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .size, .largest:
-            return apps.sorted { $0.sizeBytes > $1.sizeBytes }
+            return apps.sorted { app1, app2 in
+                if app1.sizeBytes != app2.sizeBytes {
+                    return app1.sizeBytes > app2.sizeBytes
+                }
+                return app1.name.localizedCaseInsensitiveCompare(app2.name) == .orderedAscending
+            }
         case .developer:
             return apps.sorted {
                 let lhs = $0.developer.isEmpty ? "zzz" : $0.developer
@@ -38,11 +41,19 @@ enum AppSortOption: String, CaseIterable, Identifiable, Sendable {
                 return lhs.localizedCaseInsensitiveCompare(rhs) == .orderedAscending
             }
         case .installDate:
-            return apps.sorted { ($0.installDate ?? .distantPast) > ($1.installDate ?? .distantPast) }
+            return apps.sorted {
+                let d1 = $0.installDate ?? .distantPast
+                let d2 = $1.installDate ?? .distantPast
+                if d1 != d2 { return d1 > d2 }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
         case .recentlyUsed:
-            return apps.sorted { ($0.lastUsedDate ?? .distantPast) > ($1.lastUsedDate ?? .distantPast) }
-        case .unused:
-            return apps.sorted { ($0.lastUsedDate ?? .distantPast) < ($1.lastUsedDate ?? .distantPast) }
+            return apps.sorted {
+                let d1 = $0.lastUsedDate ?? .distantPast
+                let d2 = $1.lastUsedDate ?? .distantPast
+                if d1 != d2 { return d1 > d2 }
+                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+            }
         }
     }
 }
@@ -60,7 +71,6 @@ enum SmartFilter: String, CaseIterable, Identifiable, Codable, Sendable {
     case largest = "Largest"
     case recentlyInstalled = "Recently Installed"
     case recentlyOpened = "Recently Opened"
-    case neverOpened = "Never Opened"
     case withLeftovers = "With Leftover Files"
     case brokenInstalls = "Broken Installs"
     case duplicated = "Duplicated Across Drives"
@@ -73,7 +83,6 @@ enum SmartFilter: String, CaseIterable, Identifiable, Codable, Sendable {
         case .largest: return "chart.bar.fill"
         case .recentlyInstalled: return "sparkles"
         case .recentlyOpened: return "clock.fill"
-        case .neverOpened: return "moon.zzz.fill"
         case .withLeftovers: return "trash.slash.fill"
         case .brokenInstalls: return "bandage.fill"
         case .duplicated: return "doc.on.doc.fill"

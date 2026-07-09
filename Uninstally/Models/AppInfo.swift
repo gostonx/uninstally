@@ -43,6 +43,10 @@ struct AppInfo: Identifiable, Hashable, Sendable {
     /// True when the bundle is missing an executable or core resources.
     let isBrokenInstall: Bool
 
+    /// Friendly application category derived from `LSApplicationCategoryType`
+    /// (e.g. "Utilities", "Productivity"), or "Other" when unspecified.
+    var category: String = "Other"
+
     /// The set of Info.plist derived metadata used later by the scanner.
     let extraBundleIdentifiers: [String]
 

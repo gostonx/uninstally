@@ -11,7 +11,7 @@ import os
 struct LeftoverScanner: Sendable {
 
     /// Scans for orphans given the set of currently installed applications.
-    func scan(installedApps: [AppInfo]) async -> [LeftoverItem] {
+    func scan(installedApps: [AppInfo], includeSystem: Bool = SecurityPreferences.scanSystemLevel) async -> [LeftoverItem] {
         let installedIdentifiers = Self.installedIdentifierSet(installedApps)
 
         return await withTaskGroup(of: [LeftoverItem].self) { group in
@@ -20,7 +20,13 @@ struct LeftoverScanner: Sendable {
                     Self.scanRoot(root, category: category, installed: installedIdentifiers, admin: false)
                 }
             }
-            group.addTask { Self.scanOldInstallers() }
+            if includeSystem {
+                for (category, root) in LibraryPaths.systemCategoryRoots {
+                    group.addTask {
+                        Self.scanRoot(root, category: category, installed: installedIdentifiers, admin: true)
+                    }
+                }
+            }
             group.addTask { Self.scanBrokenAliases() }
 
             var results: [LeftoverItem] = []
@@ -104,31 +110,6 @@ struct LeftoverScanner: Sendable {
         let reservedPrefixes = ["com.apple.", "group.com.apple.", "org.swift.", "com.google.keystone"]
         let lower = identifier.lowercased()
         return reservedPrefixes.contains { lower.hasPrefix($0) }
-    }
-
-    /// Finds stale installer packages in the Downloads folder.
-    private static func scanOldInstallers() -> [LeftoverItem] {
-        let downloads = LibraryPaths.home.appending(path: "Downloads", directoryHint: .isDirectory)
-        guard let children = try? FileManager.default.contentsOfDirectory(
-            at: downloads,
-            includingPropertiesForKeys: [.contentModificationDateKey],
-            options: [.skipsHiddenFiles]
-        ) else { return [] }
-
-        let cutoff = Date().addingTimeInterval(-60 * 60 * 24 * 60) // 60 days
-        var items: [LeftoverItem] = []
-        for child in children where ["dmg", "pkg"].contains(child.pathExtension.lowercased()) {
-            let modified = (try? child.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-            guard let modified, modified < cutoff else { continue }
-            items.append(LeftoverItem(
-                category: .temporary,
-                url: child,
-                sizeBytes: FileSystemUtil.size(of: child),
-                requiresAdmin: false,
-                associatedIdentifier: "Old installer"
-            ))
-        }
-        return items
     }
 
     /// Detects broken aliases / symlinks in the Applications directories.

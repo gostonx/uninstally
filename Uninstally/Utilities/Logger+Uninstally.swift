@@ -10,4 +10,5 @@ extension Logger {
     static let engine = Logger(subsystem: subsystem, category: "engine")
     static let app = Logger(subsystem: subsystem, category: "app")
     static let homebrew = Logger(subsystem: subsystem, category: "homebrew")
+    static let language = Logger(subsystem: subsystem, category: "language")
 }

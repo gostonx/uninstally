@@ -7,6 +7,7 @@ struct BatchUninstallView: View {
     @Bindable var model: BatchUninstallModel
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(HistoryStore.self) private var history
+    @State private var showBatchConfirm = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -81,10 +82,22 @@ struct BatchUninstallView: View {
                 .buttonStyle(.bordered).controlSize(.large)
                 .keyboardShortcut(.cancelAction)
             Button(mode == .permanent ? "Delete \(model.apps.count) Apps" : "Uninstall \(model.apps.count) Apps") {
-                Task { await model.run() }
+                showBatchConfirm = true
             }
             .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
             .keyboardShortcut(.defaultAction)
+            .confirmationDialog(
+                "\(mode == .permanent ? "Permanently delete" : "Uninstall") \(model.apps.count) applications?",
+                isPresented: $showBatchConfirm, titleVisibility: .visible
+            ) {
+                Button(mode == .permanent ? "Delete \(model.apps.count) Apps" : "Uninstall \(model.apps.count) Apps", role: .destructive) {
+                    Task { await model.run() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("\(model.apps.count) applications • about \(Format.bytes(model.totalEstimatedBytes)) reclaimable • "
+                     + (mode == .permanent ? "permanently deleted (cannot be undone)." : "moved to the Trash."))
+            }
         }
         .padding(16)
         .background(.bar)

@@ -31,6 +31,9 @@ enum BrowserScope: Hashable {
 final class AppBrowserModel {
     private(set) var apps: [AppInfo] = []
     private(set) var isScanning = false
+    /// Incremented on every manual refresh request; only the newest value is used,
+    /// so rapid consecutive taps are coalesced.
+    private var refreshGeneration = 0
     private(set) var leftoverIdentifiers: Set<String> = []
 
     var searchText = ""
@@ -47,8 +50,11 @@ final class AppBrowserModel {
 
     /// Performs the initial (or a refreshed) scan of installed applications.
     func load() async {
+        let generation = refreshGeneration
         isScanning = true
-        defer { isScanning = false }
+        defer {
+            if refreshGeneration == generation { isScanning = false }
+        }
         let discovered = await scanner.scan()
         apps = AppSortOption.name.sorted(discovered)
         computeDuplicates()
@@ -71,6 +77,8 @@ final class AppBrowserModel {
     }
 
     /// The apps that survive the active scope, then search, then sort.
+    /// When the scope already has an intrinsic ordering (e.g. `.largest` is
+    /// always size-descending), the global `sort` control is ignored.
     var visibleApps: [AppInfo] {
         var result: [AppInfo]
         switch scope {
@@ -88,7 +96,15 @@ final class AppBrowserModel {
                     || $0.bundleIdentifier.localizedCaseInsensitiveContains(query)
             }
         }
-        return sort.sorted(result)
+        // Smart filters that produce their own ordering should not be re-sorted
+        // by the global sort picker — that would defeat the filter's purpose.
+        let effectiveSort: AppSortOption = {
+            if case .filter(.largest) = scope            { return .size }
+            if case .filter(.recentlyInstalled) = scope  { return .installDate }
+            if case .filter(.recentlyOpened) = scope     { return .recentlyUsed }
+            return sort
+        }()
+        return effectiveSort.sorted(result)
     }
 
     /// Pure smart-filter application, free of side effects so it can be reused for
@@ -101,18 +117,14 @@ final class AppBrowserModel {
             return Array(AppSortOption.size.sorted(apps).prefix(25))
         case .recentlyInstalled:
             let cutoff = Date().addingTimeInterval(-60 * 60 * 24 * 30)
-            return apps.filter { ($0.installDate ?? .distantPast) > cutoff }
+            return AppSortOption.installDate.sorted(
+                apps.filter { ($0.installDate ?? .distantPast) > cutoff }
+            )
         case .recentlyOpened:
             let cutoff = Date().addingTimeInterval(-60 * 60 * 24 * 14)
-            return apps.filter { ($0.lastUsedDate ?? .distantPast) > cutoff }
-        case .neverOpened:
-            return apps.filter { app in
-                guard let used = app.lastUsedDate, let installed = app.installDate else {
-                    return app.lastUsedDate == nil
-                }
-                // "Never opened" ≈ last-used within a minute of install.
-                return used.timeIntervalSince(installed) < 60
-            }
+            return AppSortOption.recentlyUsed.sorted(
+                apps.filter { ($0.lastUsedDate ?? .distantPast) > cutoff }
+            )
         case .withLeftovers:
             return apps.filter { leftoverIdentifiers.contains($0.bundleIdentifier.lowercased()) }
         case .brokenInstalls:

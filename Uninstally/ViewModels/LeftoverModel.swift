@@ -58,7 +58,6 @@ final class LeftoverModel {
         isRemoving = true
         defer { isRemoving = false }
 
-        // Reuse the engine by wrapping leftovers in a synthetic plan.
         let removable = selected.map {
             RemovableItem(
                 category: $0.category,
@@ -74,10 +73,16 @@ final class LeftoverModel {
             installDate: nil, lastUsedDate: nil, volumeName: nil,
             isBrokenInstall: false, extraBundleIdentifiers: []
         )
-        let plan = UninstallPlan(app: syntheticApp, items: removable)
-        let engine = UninstallEngine()
+        // Orphans have no owning app, so only PathValidator's approved-root
+        // guarantees apply (requireAppOwnership: false). Still fully validated.
+        let validator = DeletionValidator(
+            includeSystem: SecurityPreferences.scanSystemLevel,
+            requireAppOwnership: false
+        )
+        let plan = validator.buildPlan(app: syntheticApp, items: removable, method: DeletionMode.stored)
+
         var reclaimed: Int64 = 0
-        for await event in engine.run(plan: plan, mode: DeletionMode.stored) {
+        for await event in DeletionExecutor().execute(plan: plan) {
             if case .finished(let result) = event { reclaimed = result.reclaimedBytes }
         }
         lastReclaimed = reclaimed

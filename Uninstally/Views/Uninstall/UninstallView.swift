@@ -11,9 +11,13 @@ struct UninstallView: View {
         ZStack {
             switch model.phase {
             case .scanning:
-                ScanningView(app: model.app)
+                ScanningView(app: model.app, step: model.scanStep)
             case .review, .confirming:
-                UninstallReviewView(model: model)
+                UninstallSimulationView(
+                    model: model,
+                    onCancel: cancel,
+                    onProceed: { Task { await model.proceed() } }
+                )
             case .uninstalling:
                 UninstallProgressView(app: model.app, progress: model.progress)
             case .finished:
@@ -24,11 +28,10 @@ struct UninstallView: View {
                 }
             }
 
-            if model.phase == .confirming, let plan = model.plan {
+            if model.phase == .confirming {
                 SafetyConfirmView(
                     app: model.app,
-                    plan: plan,
-                    mode: model.deletionMode,
+                    summary: model.securitySummary,
                     onCancel: { model.cancelConfirmation() },
                     onConfirm: { Task { await model.uninstall() } }
                 )
@@ -49,25 +52,28 @@ struct UninstallView: View {
         }
     }
 
+    private func cancel() {
+        if model.isDedicatedSession {
+            NSApplication.shared.terminate(nil)
+        } else {
+            coordinator.showBrowser()
+        }
+    }
+
     private func finish() {
         if model.isDedicatedSession {
             NSApplication.shared.terminate(nil)
         } else {
-            // Optimistic update: if the app bundle is actually gone, drop it from
-            // the in-memory model immediately (no full rescan). The browser then
-            // appears with the app already removed and every derived count updated.
-            if !FileSystemUtil.exists(model.app.url) {
-                coordinator.browserModel.remove(id: model.app.id)
-            }
-            coordinator.browserModel.selection.removeAll()
-            coordinator.showBrowser()
+            let removedID = FileSystemUtil.exists(model.app.url) ? nil : model.app.id
+            coordinator.finishedUninstall(removed: removedID)
         }
     }
 }
 
-/// Indeterminate scan screen shown while the associated-file scanner runs.
+/// Indeterminate scan screen shown while the simulation runs.
 struct ScanningView: View {
     let app: AppInfo
+    var step: String = "Preparing…"
     @State private var pulse = false
 
     var body: some View {
@@ -76,10 +82,12 @@ struct ScanningView: View {
                 .scaleEffect(pulse ? 1.05 : 0.97)
                 .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: pulse)
             VStack(spacing: 6) {
-                Text("Analysing \(app.name)")
+                Text("Simulating uninstall of \(app.name)")
                     .font(.title2.weight(.semibold))
-                Text("Finding every file that belongs to this application…")
+                Text(step)
                     .foregroundStyle(.secondary)
+                    .animation(.default, value: step)
+                    .contentTransition(.opacity)
             }
             ProgressView()
                 .controlSize(.large)

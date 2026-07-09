@@ -4,6 +4,7 @@ import SwiftUI
 /// the user review and remove them.
 struct LeftoverScannerView: View {
     @State private var model = LeftoverModel()
+    @State private var showRemoveConfirm = false
 
     var body: some View {
         @Bindable var model = model
@@ -110,10 +111,23 @@ struct LeftoverScannerView: View {
                 ProgressView().controlSize(.small)
             }
             Button("Remove Selected") {
-                Task { await model.removeSelected() }
+                showRemoveConfirm = true
             }
             .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
             .disabled(model.selectedItems.isEmpty || model.isRemoving)
+            .confirmationDialog(
+                "Remove \(model.selectedItems.count) leftover items?",
+                isPresented: $showRemoveConfirm, titleVisibility: .visible
+            ) {
+                Button("Remove \(model.selectedItems.count) Items", role: .destructive) {
+                    Task { await model.removeSelected() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(DeletionMode.stored == .permanent
+                     ? "\(Format.bytes(model.selectedBytes)) will be permanently deleted. This cannot be undone."
+                     : "\(Format.bytes(model.selectedBytes)) will be moved to the Trash.")
+            }
         }
         .padding(16)
         .background(.bar)

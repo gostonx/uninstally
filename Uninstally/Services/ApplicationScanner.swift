@@ -88,8 +88,9 @@ struct ApplicationScanner: Sendable {
 
         let developer = Self.developerName(bundleID: bundleID, info: info)
         let auxIdentifiers = Self.auxiliaryIdentifiers(in: bundle)
+        let categoryName = Self.categoryName(from: info)
 
-        return AppInfo(
+        var app = AppInfo(
             url: url,
             name: name,
             bundleIdentifier: bundleID,
@@ -103,6 +104,19 @@ struct ApplicationScanner: Sendable {
             isBrokenInstall: !executableExists || bundleID.isEmpty,
             extraBundleIdentifiers: auxIdentifiers
         )
+        app.category = categoryName
+        return app
+    }
+
+    /// Derives a human-readable category from `LSApplicationCategoryType`, e.g.
+    /// "public.app-category.utilities" -> "Utilities". Falls back to "Other".
+    private static func categoryName(from info: [String: Any]) -> String {
+        guard let raw = info["LSApplicationCategoryType"] as? String else { return "Other" }
+        let name = raw
+            .replacingOccurrences(of: "public.app-category.", with: "")
+            .replacingOccurrences(of: "public.", with: "")
+        let parts = name.split(separator: "-")
+        return parts.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
     }
 
     /// Derives a friendly developer name. Prefers an explicit copyright string,
