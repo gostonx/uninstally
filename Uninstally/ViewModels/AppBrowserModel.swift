@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import os
 
 /// What the application browser is currently showing: a built-in smart filter or
 /// a user-created Collection.
@@ -55,11 +54,32 @@ final class AppBrowserModel {
         defer {
             if refreshGeneration == generation { isScanning = false }
         }
-        let discovered = await scanner.scan()
+        var discovered = await scanner.scan()
+        // Track size changes from previous scan
+        let oldSizes = Dictionary(uniqueKeysWithValues: apps.map { ($0.id, $0.sizeBytes) })
+        for i in discovered.indices {
+            let id = discovered[i].id
+            if let old = oldSizes[id], old != discovered[i].sizeBytes {
+                discovered[i].previousSizeBytes = old
+            }
+        }
         apps = AppSortOption.name.sorted(discovered)
         computeDuplicates()
-        // Leftover detection runs opportunistically in the background.
+        // Leftover detection and source detection run in the background.
         Task { await self.refreshLeftoverIndex() }
+        Task { await self.detectInstallationSources() }
+    }
+
+    private func detectInstallationSources() async {
+        let detector = InstallationSourceDetector()
+        for i in apps.indices {
+            if apps[i].installationSource != .unknown { continue }
+            let source = await detector.detect(
+                for: apps[i].url,
+                bundleIdentifier: apps[i].bundleIdentifier
+            )
+            apps[i].installationSource = source
+        }
     }
 
     /// Rebuilds the index of which installed apps still have detectable leftovers.
@@ -131,6 +151,14 @@ final class AppBrowserModel {
             return apps.filter(\.isBrokenInstall)
         case .duplicated:
             return apps.filter { duplicatedIdentifiers.contains($0.bundleIdentifier) }
+        case .homebrewApps:
+            return apps.filter { $0.installationSource == .homebrewCask }
+        case .appStoreApps:
+            return apps.filter { $0.installationSource == .macAppStore }
+        case .dmgApps:
+            return apps.filter { $0.installationSource == .dmgInstaller }
+        case .pkgApps:
+            return apps.filter { $0.installationSource == .pkgInstaller }
         }
     }
 

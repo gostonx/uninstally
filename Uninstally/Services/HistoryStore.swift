@@ -55,7 +55,8 @@ final class HistoryStore {
             storageRecovered: Int(result.reclaimedBytes),
             deletionMethod: mode,
             trashedAppPath: result.trashedAppURL?.path,
-            iconData: iconData
+            iconData: iconData,
+            installationSource: app.installationSource
         )
         context.insert(record)
         save()

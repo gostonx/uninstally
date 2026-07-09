@@ -15,15 +15,6 @@ import os
 /// * **Compute real sizes** so the reclaimable total is accurate.
 struct AssociatedFileScanner: Sendable {
 
-    /// Produces a full uninstall plan for an application.
-    func makePlan(for app: AppInfo, includeSystem: Bool = SecurityPreferences.scanSystemLevel) async -> UninstallPlan {
-        let items = await scan(for: app, includeSystem: includeSystem)
-        return UninstallPlan(app: app, items: items)
-    }
-
-    /// Discovers all removable artefacts for the given application. When
-    /// `includeSystem` is `false`, system-level `/Library` locations are skipped
-    /// (honouring the "Scan System Level Locations" preference).
     func scan(for app: AppInfo, includeSystem: Bool = SecurityPreferences.scanSystemLevel) async -> [RemovableItem] {
         await withTaskGroup(of: [RemovableItem].self) { group in
             // The application bundle itself is always present.

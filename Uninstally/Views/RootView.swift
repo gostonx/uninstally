@@ -34,9 +34,10 @@ struct RootView: View {
         .sheet(isPresented: showOnboarding) {
             OnboardingView { hasOnboarded = true }
         }
+        .sheet(item: inspectorBinding) { app in
+            NavigationStack { AppInspectorView(app: app) }
+        }
         .task {
-            // Check for updates on launch (standalone sessions only), in addition
-            // to Sparkle's own scheduled 24-hour checks.
             if !coordinator.launchedFromFinder {
                 updateManager.checkForUpdatesInBackground()
             }
@@ -50,12 +51,17 @@ struct RootView: View {
         }
     }
 
-    /// Onboarding only appears for normal standalone launches, never for a
-    /// one-shot Finder uninstall.
     private var showOnboarding: Binding<Bool> {
         Binding(
             get: { !hasOnboarded && !coordinator.launchedFromFinder },
             set: { if !$0 { hasOnboarded = true } }
+        )
+    }
+
+    private var inspectorBinding: Binding<AppInfo?> {
+        Binding(
+            get: { coordinator.inspectorApp },
+            set: { coordinator.inspectorApp = $0 }
         )
     }
 }

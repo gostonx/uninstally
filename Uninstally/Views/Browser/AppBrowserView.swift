@@ -130,6 +130,9 @@ struct AppBrowserView: View {
         if case .collection = scope {
             return "Drag apps here from another view, or right-click an app and choose “Add to Collection”."
         }
+        if model.apps.isEmpty {
+            return "No applications were found. Click Refresh to scan again."
+        }
         return "Nothing matches this filter."
     }
 

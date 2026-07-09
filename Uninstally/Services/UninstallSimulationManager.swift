@@ -1,31 +1,21 @@
 import Foundation
 
-/// Builds an uninstall simulation for an application: it scans every associated
-/// artefact, **validates every path**, and computes storage and risk analysis —
-/// all without deleting anything. The resulting `SimulationResult` carries only
-/// validated items, so the executor can run later without a second scan.
-///
-/// Kept intentionally separate from the deletion executor: this only inspects.
 @MainActor
 struct UninstallSimulationManager {
     private let scanner = AssociatedFileScanner()
 
-    /// Runs a full, non-destructive simulation, reporting progress steps. The heavy
-    /// scanning runs off the main thread, keeping the UI responsive. System-level
-    /// locations are skipped when the user has disabled that preference.
     func run(for app: AppInfo, onProgress: @MainActor (String) -> Void) async -> SimulationResult {
         let includeSystem = SecurityPreferences.scanSystemLevel
 
-        onProgress("Scanning application…")
-        onProgress("Searching containers, caches and preferences…")
+        onProgress("Scanning application\u{2026}")
+        onProgress("Searching containers, caches and preferences\u{2026}")
         let items = await scanner.scan(for: app, includeSystem: includeSystem)
 
-        onProgress("Searching login items, launch agents and services…")
-        onProgress("Validating every path…")
+        onProgress("Searching login items, launch agents and services\u{2026}")
+        onProgress("Validating every path\u{2026}")
         let validator = DeletionValidator(includeSystem: includeSystem)
         let plan = validator.buildPlan(app: app, items: items, method: DeletionMode.stored)
 
-        // Only validated artefacts are surfaced for review.
         let validatedItems = plan.items.map { planned in
             RemovableItem(
                 category: planned.category,
@@ -37,7 +27,9 @@ struct UninstallSimulationManager {
             )
         }
 
-        onProgress("Calculating storage…")
-        return SimulationResult(app: app, items: validatedItems, rejectedCount: plan.rejected.count)
+        onProgress("Calculating storage\u{2026}")
+        var result = SimulationResult(app: app, items: validatedItems, rejectedCount: plan.rejected.count)
+        result.safetyScore = SafetyScore(from: plan)
+        return result
     }
 }

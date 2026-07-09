@@ -20,6 +20,9 @@ struct UninstallSimulationView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     if let simulation {
                         header(simulation)
+                        if let score = simulation.safetyScore {
+                            SafetyScoreCard(score: score)
+                        }
                         SummaryCard(simulation: simulation)
                         StorageAnalysisCard(simulation: simulation)
                         if !simulation.riskFiles.isEmpty {
@@ -92,6 +95,7 @@ struct UninstallSimulationView: View {
                         category: category,
                         isExpanded: expanded.contains(category.removalCategory),
                         isProtected: category.removalCategory == .application,
+                        appName: simulation.app.name,
                         onToggleExpand: { toggleExpand(category.removalCategory) }
                     )
                 }
@@ -318,6 +322,7 @@ private struct CategorySection: View {
     @Bindable var category: SimulationCategory
     let isExpanded: Bool
     let isProtected: Bool
+    let appName: String
     let onToggleExpand: () -> Void
 
     var body: some View {
@@ -327,7 +332,7 @@ private struct CategorySection: View {
                 if isExpanded {
                     Divider().padding(.horizontal, 12)
                     ForEach(category.files) { file in
-                        SimFileRow(file: file, isProtected: isProtected)
+                        SimFileRow(file: file, isProtected: isProtected, appName: appName)
                         if file.id != category.files.last?.id {
                             Divider().padding(.leading, 46)
                         }
@@ -381,7 +386,14 @@ private struct CategorySection: View {
 private struct SimFileRow: View {
     @Bindable var file: SimulationFile
     let isProtected: Bool
+    let appName: String
     @State private var hovering = false
+
+    private let explainer = FileExplanationEngine()
+
+    private var explanation: String {
+        explainer.explain(category: file.category, url: file.url, appName: appName)
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -403,7 +415,9 @@ private struct SimFileRow: View {
                 Text(file.displayPath)
                     .font(.caption2).foregroundStyle(.secondary)
                     .lineLimit(1).truncationMode(.middle)
-                    .help(file.matchReason)
+                Text(explanation)
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .lineLimit(1).truncationMode(.tail)
             }
             Spacer(minLength: 8)
             if file.requiresAdmin {
@@ -434,5 +448,108 @@ private struct SimFileRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(file.name), \(Format.bytes(file.sizeBytes)), \(file.matchReason)")
+    }
+}
+
+// MARK: - Safety Score Card
+
+private struct SafetyScoreCard: View {
+    let score: SafetyScore
+    @State private var isExpanded = false
+
+    private var levelColor: Color {
+        switch score.level {
+        case .safeToRemove: return .green
+        case .reviewRecommended: return .orange
+        case .highRisk: return .red
+        }
+    }
+
+    var body: some View {
+        GlassCard(cornerRadius: 12) {
+            VStack(alignment: .leading, spacing: 12) {
+                Button(action: { withAnimation(.snappy(duration: 0.22)) { isExpanded.toggle() } }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: score.level.systemImage)
+                            .font(.title2)
+                            .foregroundStyle(levelColor)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(score.level.rawValue)
+                                .font(.headline)
+                            Text(score.level.headerDescription)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                if isExpanded {
+                    Divider()
+
+                    VStack(spacing: 8) {
+                        ForEach(score.factors) { factor in
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: factor.severity.systemImage)
+                                    .font(.callout)
+                                    .foregroundStyle(factorTint(factor))
+                                    .frame(width: 20)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(factor.name)
+                                        .font(.callout.weight(.medium))
+                                    Text(factor.detail)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(.vertical, 2)
+                        }
+
+                        Divider()
+
+                        VStack(spacing: 6) {
+                            detailRow("Files analyzed", "\(score.filesAnalyzed)", "doc.text.magnifyingglass")
+                            detailRow("Files to remove", "\(score.filesToRemove)", "trash")
+                            if score.sharedFilesFound > 0 {
+                                detailRow("Shared files", "\(score.sharedFilesFound)", "person.2.fill")
+                            }
+                            if score.systemFilesFound > 0 {
+                                detailRow("System files", "\(score.systemFilesFound)", "gearshape.2.fill")
+                            }
+                            if score.adminFilesFound > 0 {
+                                detailRow("Admin files", "\(score.adminFilesFound)", "lock.shield.fill")
+                            }
+                            if score.backgroundComponentsCount > 0 {
+                                detailRow("Background components", "\(score.backgroundComponentsCount)", "arrow.triangle.2.circlepath")
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    private func factorTint(_ factor: SafetyFactor) -> Color {
+        switch factor.severity.tint {
+        case .green: return .green
+        case .yellow: return .orange
+        case .red: return .red
+        }
+    }
+
+    private func detailRow(_ label: String, _ value: String, _ icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).frame(width: 20).foregroundStyle(.secondary)
+            Text(label).font(.callout).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).font(.callout.weight(.medium).monospacedDigit())
+        }
     }
 }

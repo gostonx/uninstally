@@ -50,6 +50,12 @@ struct AppInfo: Identifiable, Hashable, Sendable {
     /// The set of Info.plist derived metadata used later by the scanner.
     let extraBundleIdentifiers: [String]
 
+    /// Detected installation source.
+    var installationSource: InstallationSource = .unknown
+
+    /// Size from the previous scan, used to detect growth.
+    var previousSizeBytes: Int64?
+
     var displayVersion: String {
         if version.isEmpty && buildVersion.isEmpty { return "—" }
         if buildVersion.isEmpty || buildVersion == version { return version }

@@ -35,6 +35,12 @@ struct AppGridCell: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                if let prev = app.previousSizeBytes, prev != app.sizeBytes {
+                    Text(app.sizeBytes > prev ? "+\(Format.bytes(app.sizeBytes - prev))" : "-\(Format.bytes(prev - app.sizeBytes))")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .monospacedDigit()
+                }
             }
         }
         .frame(maxWidth: .infinity)
@@ -98,6 +104,12 @@ struct AppListRow: View {
                 Text(Format.bytes(app.sizeBytes))
                     .font(.callout.weight(.medium))
                     .monospacedDigit()
+                if let prev = app.previousSizeBytes, prev != app.sizeBytes {
+                    Text(app.sizeBytes > prev ? "+\(Format.bytes(app.sizeBytes - prev))" : "-\(Format.bytes(prev - app.sizeBytes))")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .monospacedDigit()
+                }
                 Text(Format.relativeDate(app.installDate))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -140,6 +152,11 @@ struct AppContextMenu: View {
         Button("Open", systemImage: "arrow.up.forward.app") {
             NSWorkspace.shared.open(app.url)
         }
+        Divider()
+        Button("Show Details", systemImage: "info.circle") {
+            coordinator.showInspector(for: app)
+        }
+        .keyboardShortcut("i", modifiers: .command)
     }
 
     @ViewBuilder

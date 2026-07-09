@@ -74,6 +74,10 @@ enum SmartFilter: String, CaseIterable, Identifiable, Codable, Sendable {
     case withLeftovers = "With Leftover Files"
     case brokenInstalls = "Broken Installs"
     case duplicated = "Duplicated Across Drives"
+    case homebrewApps = "Homebrew Apps"
+    case appStoreApps = "App Store Apps"
+    case dmgApps = "DMG Installed Apps"
+    case pkgApps = "PKG Installed Apps"
 
     var id: String { rawValue }
 
@@ -86,6 +90,10 @@ enum SmartFilter: String, CaseIterable, Identifiable, Codable, Sendable {
         case .withLeftovers: return "trash.slash.fill"
         case .brokenInstalls: return "bandage.fill"
         case .duplicated: return "doc.on.doc.fill"
+        case .homebrewApps: return "mug.fill"
+        case .appStoreApps: return "apple.logo"
+        case .dmgApps: return "opticaldisc"
+        case .pkgApps: return "shippingbox.fill"
         }
     }
 }

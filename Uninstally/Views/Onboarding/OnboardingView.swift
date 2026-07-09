@@ -1,29 +1,40 @@
+import AppKit
 import SwiftUI
 
-/// A concise, three-page onboarding shown on first launch. Emphasises the smart,
-/// identifier-driven detection and the safety guarantees.
 struct OnboardingView: View {
     let onFinish: () -> Void
     @State private var page = 0
 
     private let pages: [OnboardingPage] = [
         OnboardingPage(
-            symbol: "sparkles",
-            title: "Welcome to Uninstally",
-            subtitle: "The cleanest way to completely remove apps and every file they leave behind.",
+            usesAppIcon: true,
+            title: "Uninstally",
+            subtitle: "Uninstally completely removes macOS applications and every file they create \u{2014} caches, preferences, containers, and more. Unlike dragging an app to the Trash, Uninstally finds and removes all the supporting files applications leave behind.",
             tint: .accentColor
         ),
         OnboardingPage(
-            symbol: "scope",
-            title: "Smart Detection",
-            subtitle: "Uninstally matches files by bundle identifier — not just by name — across every Library location, so nothing gets missed and nothing unrelated gets touched.",
-            tint: .purple
+            symbol: "lock.shield.fill",
+            title: "Permissions & Safety",
+            subtitle: "Uninstally only removes files it can confidently link to the application being uninstalled, using bundle identifiers and path validation. It never runs shell commands or scripts. Administrator files are only touched with your explicit approval.",
+            tint: .blue
         ),
         OnboardingPage(
-            symbol: "checkmark.shield.fill",
-            title: "Safe by Design",
-            subtitle: "You review everything before it's removed. Files go to the Trash where possible, and admin actions ask for permission only when needed.",
-            tint: .green
+            symbol: "arrow.triangle.branch",
+            title: "Trash vs Permanent Delete",
+            subtitle: "By default, Uninstally moves files to the Trash so you can recover them. You can switch to permanent deletion in Settings, but Trash mode is always safer. Either way, you review every file before anything is removed.",
+            tint: .orange
+        ),
+        OnboardingPage(
+            symbol: "checkmark.seal.fill",
+            title: "Open Source & Privacy",
+            subtitle: "Uninstally is open source software. Updates are verified with cryptographic signatures from the official GitHub repository. No analytics are collected, no data is sent anywhere, and everything stays on your Mac.",
+            tint: .green,
+            footer: AnyView(
+                Link(destination: URL(string: "https://github.com/gostonx/uninstally")!) {
+                    Label("View on GitHub", systemImage: "arrow.up.forward.app")
+                        .font(.callout.weight(.medium))
+                }
+            )
         ),
     ]
 
@@ -40,7 +51,7 @@ struct OnboardingView: View {
                     }
                 }
             }
-            .frame(height: 340)
+            .frame(height: 380)
             .animation(.spring(response: 0.45, dampingFraction: 0.85), value: page)
 
             HStack(spacing: 8) {
@@ -70,16 +81,27 @@ struct OnboardingView: View {
             }
             .padding(24)
         }
-        .frame(width: 460, height: 470)
+        .frame(width: 500, height: 510)
         .background(.regularMaterial)
     }
 }
 
 private struct OnboardingPage {
-    let symbol: String
+    let symbol: String?
+    let usesAppIcon: Bool
     let title: String
     let subtitle: String
     let tint: Color
+    let footer: AnyView?
+
+    init(symbol: String? = nil, usesAppIcon: Bool = false, title: String, subtitle: String, tint: Color, footer: AnyView? = nil) {
+        self.symbol = symbol
+        self.usesAppIcon = usesAppIcon
+        self.title = title
+        self.subtitle = subtitle
+        self.tint = tint
+        self.footer = footer
+    }
 }
 
 private struct OnboardingPageView: View {
@@ -88,12 +110,23 @@ private struct OnboardingPageView: View {
 
     var body: some View {
         VStack(spacing: 22) {
-            Image(systemName: page.symbol)
-                .font(.system(size: 76))
-                .foregroundStyle(page.tint)
-                .symbolRenderingMode(.hierarchical)
-                .scaleEffect(appeared ? 1 : 0.6)
-                .opacity(appeared ? 1 : 0)
+            if page.usesAppIcon {
+                if let appIcon = NSApp.applicationIconImage {
+                    Image(nsImage: appIcon)
+                        .resizable()
+                        .frame(width: 88, height: 88)
+                        .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+                        .scaleEffect(appeared ? 1 : 0.6)
+                        .opacity(appeared ? 1 : 0)
+                }
+            } else if let symbol = page.symbol {
+                Image(systemName: symbol)
+                    .font(.system(size: 72))
+                    .foregroundStyle(page.tint)
+                    .symbolRenderingMode(.hierarchical)
+                    .scaleEffect(appeared ? 1 : 0.6)
+                    .opacity(appeared ? 1 : 0)
+            }
             Text(page.title)
                 .font(.title.weight(.semibold))
                 .multilineTextAlignment(.center)
@@ -101,9 +134,13 @@ private struct OnboardingPageView: View {
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+                .padding(.horizontal, 44)
+            if let footer = page.footer {
+                footer
+                    .padding(.top, 8)
+            }
         }
-        .padding(.top, 40)
+        .padding(.top, 32)
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { appeared = true }
         }

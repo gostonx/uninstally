@@ -13,6 +13,8 @@ final class SimulationResult {
     let allFiles: [SimulationFile]
     /// How many discovered artefacts were excluded because they failed validation.
     let rejectedCount: Int
+    /// Computed after the deletion plan is validated.
+    var safetyScore: SafetyScore?
 
     init(app: AppInfo, items: [RemovableItem], rejectedCount: Int = 0) {
         self.app = app

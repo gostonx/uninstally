@@ -24,6 +24,8 @@ final class UninstallRecord {
     var trashedAppPath: String?
     /// A captured PNG of the app icon (the bundle may no longer exist).
     @Attribute(.externalStorage) var iconData: Data?
+    /// Installation source at time of uninstall, for reinstall actions.
+    var installationSourceRaw: String
 
     init(
         appName: String,
@@ -36,7 +38,8 @@ final class UninstallRecord {
         storageRecovered: Int,
         deletionMethod: DeletionMode,
         trashedAppPath: String? = nil,
-        iconData: Data? = nil
+        iconData: Data? = nil,
+        installationSource: InstallationSource = .unknown
     ) {
         self.appName = appName
         self.bundleIdentifier = bundleIdentifier
@@ -49,6 +52,7 @@ final class UninstallRecord {
         self.deletionMethodRaw = deletionMethod.rawValue
         self.trashedAppPath = trashedAppPath
         self.iconData = iconData
+        self.installationSourceRaw = installationSource.rawValue
     }
 
     var deletionMethod: DeletionMode {

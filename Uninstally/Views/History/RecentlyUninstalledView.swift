@@ -16,6 +16,8 @@ struct RecentlyUninstalledView: View {
     @State private var detailRecord: UninstallRecord?
     @State private var showClearConfirm = false
     @State private var errorMessage: String?
+    @State private var isSelecting = false
+    @State private var selectedIDs: Set<PersistentIdentifier> = []
 
     private var filtered: [UninstallRecord] {
         records.filter { filter.matches($0) }.filter { matchesSearch($0) }
@@ -70,7 +72,7 @@ struct RecentlyUninstalledView: View {
             } else {
                 List(selection: $selection) {
                     ForEach(filtered) { record in
-                        HistoryRow(record: record)
+                        HistoryRow(record: record, isSelecting: isSelecting, isSelected: selectedIDs.contains(record.persistentModelID))
                             .tag(record.persistentModelID)
                     }
                 }
@@ -116,6 +118,31 @@ struct RecentlyUninstalledView: View {
             .help("Filter history")
         }
         ToolbarItem(placement: .primaryAction) {
+            Button {
+                exportHistory()
+            } label: {
+                Label("Export History", systemImage: "square.and.arrow.up")
+            }
+            .disabled(records.isEmpty)
+            .help("Export history as a text file")
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                withAnimation { isSelecting.toggle(); if !isSelecting { selectedIDs.removeAll() } }
+            } label: {
+                Label(isSelecting ? "Done" : "Select", systemImage: "checklist")
+            }
+        }
+        if isSelecting && !selectedIDs.isEmpty {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    restoreSelected()
+                } label: {
+                    Label("Restore \(selectedIDs.count)", systemImage: "arrow.uturn.backward")
+                }
+            }
+        }
+        ToolbarItem(placement: .primaryAction) {
             Button(role: .destructive) {
                 showClearConfirm = true
             } label: {
@@ -142,6 +169,30 @@ struct RecentlyUninstalledView: View {
 
     // MARK: - Actions
 
+    private func exportHistory() {
+        let panel = NSSavePanel()
+        panel.title = "Export Uninstall History"
+        panel.nameFieldStringValue = "Uninstally History.txt"
+        panel.allowedContentTypes = [.plainText]
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            let lines = records.map { record in
+                "\(Format.date(record.dateUninstalled))  \(record.appName)  \(record.developer)  v\(record.version)  \(Format.bytes(Int64(record.storageRecovered)))  \(record.deletionMethod.title)"
+            }
+            let header = "Uninstally  Uninstall History  \(Format.date(Date()))\n\n"
+            try? (header + lines.joined(separator: "\n")).write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private func restoreSelected() {
+        let selected = records.filter { selectedIDs.contains($0.persistentModelID) }
+        for record in selected where record.deletionMethod == .trash {
+            restore(record)
+        }
+        selectedIDs.removeAll()
+        isSelecting = false
+    }
+
     private func restore(_ record: UninstallRecord) {
         guard let source = record.restorableTrashURL else {
             errorMessage = "This item is no longer in the Trash."
@@ -160,6 +211,13 @@ struct RecentlyUninstalledView: View {
     private func reveal(_ record: UninstallRecord) {
         let dir = URL(fileURLWithPath: record.originalLocation)
         NSWorkspace.shared.activateFileViewerSelecting([dir])
+    }
+
+    private func reinstallViaHomebrew(_ record: UninstallRecord) {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/brew")
+        task.arguments = ["reinstall", "--cask", record.bundleIdentifier]
+        try? task.run()
     }
 }
 
@@ -207,9 +265,16 @@ private struct StatisticsHeader: View {
 
 private struct HistoryRow: View {
     let record: UninstallRecord
+    var isSelecting = false
+    var isSelected = false
 
     var body: some View {
         HStack(spacing: 12) {
+            if isSelecting {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .font(.title3)
+            }
             RecordIcon(data: record.iconData, size: 32)
             VStack(alignment: .leading, spacing: 1) {
                 Text(record.appName).font(.body.weight(.medium)).lineLimit(1)

@@ -10,6 +10,7 @@ final class LeftoverModel {
     private(set) var isScanning = false
     private(set) var isRemoving = false
     private(set) var lastReclaimed: Int64?
+    private(set) var scanProgress: String = ""
 
     var searchText = ""
 
@@ -37,7 +38,8 @@ final class LeftoverModel {
 
     func scan() async {
         isScanning = true
-        defer { isScanning = false }
+        scanProgress = "Scanning\u{2026}"
+        defer { isScanning = false; scanProgress = "" }
         let apps = await appScanner.scan()
         items = await scanner.scan(installedApps: apps)
     }

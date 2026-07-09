@@ -53,6 +53,12 @@ final class AppCoordinator {
         route = .batch(BatchUninstallModel(apps: apps))
     }
 
+    func showInspector(for app: AppInfo) {
+        inspectorApp = app
+    }
+
+    var inspectorApp: AppInfo?
+
     /// Returns from a completed single uninstall: optimistically drops the removed
     /// app, then continues an individual-review queue or returns to the browser.
     func finishedUninstall(removed appID: AppInfo.ID?) {

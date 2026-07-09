@@ -11,7 +11,9 @@ struct ApplicationScanner: Sendable {
 
     /// Scans all known application directories and returns the discovered apps.
     func scan() async -> [AppInfo] {
-        let directories = LibraryPaths.applicationDirectories
+        let standard = LibraryPaths.applicationDirectories
+        let custom = customScanPaths
+        let directories = standard + custom
         return await withTaskGroup(of: [AppInfo].self) { group in
             for directory in directories {
                 group.addTask { Self.scanDirectory(directory) }
@@ -32,6 +34,17 @@ struct ApplicationScanner: Sendable {
     }
 
     // MARK: - Private
+
+    private var customScanPaths: [URL] {
+        guard let paths = UserDefaults.standard.stringArray(forKey: "customScanPaths"),
+              !paths.isEmpty else { return [] }
+        return paths.compactMap { path in
+            var isDir: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue
+            else { return nil }
+            return URL(fileURLWithPath: path)
+        }
+    }
 
     private static func scanDirectory(_ directory: URL) -> [AppInfo] {
         let fm = FileManager.default
