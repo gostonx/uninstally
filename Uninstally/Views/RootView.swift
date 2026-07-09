@@ -25,8 +25,8 @@ struct RootView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: coordinator.route)
-        .frame(minWidth: 720, minHeight: 560)
-        .background(VibrantBackground())
+        .frame(minWidth: 720, minHeight: 480)
+        .translucentWindowBackground()
         .sheet(isPresented: showOnboarding) {
             OnboardingView { hasOnboarded = true }
         }

@@ -47,7 +47,7 @@ final class BatchUninstallModel {
             currentIndex = index
             currentApp = app
             let plan = await scanner.makePlan(for: app)
-            for await event in engine.run(plan: plan) {
+            for await event in engine.run(plan: plan, mode: DeletionMode.stored) {
                 switch event {
                 case .progress(let progress):
                     self.progress = progress

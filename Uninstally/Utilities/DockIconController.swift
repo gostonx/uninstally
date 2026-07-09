@@ -7,13 +7,10 @@ enum AppSettings {
     /// the app as a lightweight accessory unless the user opts in.
     static let showDockIconKey = "showDockIcon"
 
-    /// Whether subtle trackpad haptic feedback is enabled. Defaults to `true`.
-    static let hapticsEnabledKey = "hapticsEnabled"
-
     // MARK: Uninstall
 
-    /// Move removed user files to the Trash (recoverable) rather than deleting.
-    static let uninstallMoveToTrashKey = "uninstallMoveToTrash"
+    /// How removed files are disposed of: `trash` or `permanent` (see `DeletionMode`).
+    static let deletionModeKey = "deletionMode"
     /// Quit automatically after a Finder-initiated uninstall completes.
     static let quitAfterFinderKey = "quitAfterFinderUninstall"
 
@@ -45,6 +42,12 @@ enum AppSettings {
     static let updateChannelKey = "updateChannel"
     /// Whether pre-release (beta/nightly) updates are offered.
     static let receiveBetaUpdatesKey = "receiveBetaUpdates"
+
+    /// Removes obsolete preferences left over from removed features (e.g. the
+    /// former haptic-feedback toggle), keeping existing installs tidy.
+    static func removeObsoleteDefaults() {
+        UserDefaults.standard.removeObject(forKey: "hapticsEnabled")
+    }
 }
 
 /// Applies the Dock-icon preference by switching the process activation policy.

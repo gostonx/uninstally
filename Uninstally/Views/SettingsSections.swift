@@ -41,7 +41,6 @@ struct SettingsSectionCard: View {
     @ViewBuilder
     private var content: some View {
         switch section {
-        case .general: GeneralContent()
         case .updates: UpdatesContent()
         case .appearance: AppearanceContent()
         case .uninstall: UninstallContent()
@@ -84,35 +83,21 @@ struct SettingsToggleRow: View {
     }
 }
 
-/// A card container that stacks rows with hairline dividers.
+/// A native grouped container that stacks rows with hairline dividers, matching
+/// the grouped sections in System Settings.
 struct SettingsCard<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
-        GlassCard(cornerRadius: 12, padding: 0) {
+        GroupBox {
             VStack(spacing: 0) { content }
+                .frame(maxWidth: .infinity)
         }
+        .groupBoxStyle(.automatic)
     }
 }
 
 private struct RowDivider: View {
     var body: some View { Divider().padding(.leading, 14) }
-}
-
-// MARK: - General
-
-private struct GeneralContent: View {
-    @AppStorage(AppSettings.hapticsEnabledKey) private var haptics = true
-
-    var body: some View {
-        SettingsCard {
-            SettingsToggleRow(
-                title: "Haptic Feedback",
-                subtitle: "Subtle trackpad feedback for selections, section changes, list edges and reordering. No effect without a Force Touch trackpad.",
-                isOn: $haptics
-            )
-            .onChange(of: haptics) { _, on in if on { HapticManager.shared.itemSelected() } }
-        }
-    }
 }
 
 // MARK: - Appearance
@@ -137,23 +122,75 @@ private struct AppearanceContent: View {
 // MARK: - Uninstall Settings
 
 private struct UninstallContent: View {
-    @AppStorage(AppSettings.uninstallMoveToTrashKey) private var moveToTrash = true
+    @AppStorage(AppSettings.deletionModeKey) private var deletionModeRaw = DeletionMode.trash.rawValue
     @AppStorage(AppSettings.quitAfterFinderKey) private var quitAfterFinder = true
 
+    private var deletionMode: Binding<DeletionMode> {
+        Binding(
+            get: { DeletionMode(rawValue: deletionModeRaw) ?? .trash },
+            set: { deletionModeRaw = $0.rawValue }
+        )
+    }
+
     var body: some View {
-        SettingsCard {
-            SettingsToggleRow(
-                title: "Move removed files to the Trash",
-                subtitle: "User-level files are recoverable from the Trash. System files always require administrator approval.",
-                isOn: $moveToTrash
-            )
-            RowDivider()
-            SettingsToggleRow(
-                title: "Quit after a Finder uninstall",
-                subtitle: "Automatically close Uninstally once a right-click uninstall finishes.",
-                isOn: $quitAfterFinder
-            )
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Deletion Method")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 2)
+
+            SettingsCard {
+                ForEach(Array(DeletionMode.allCases.enumerated()), id: \.element) { index, mode in
+                    DeletionModeRow(mode: mode, selection: deletionMode)
+                    if index < DeletionMode.allCases.count - 1 { RowDivider() }
+                }
+            }
+
+            SettingsCard {
+                SettingsToggleRow(
+                    title: "Quit after a Finder uninstall",
+                    subtitle: "Automatically close Uninstally once a right-click uninstall finishes.",
+                    isOn: $quitAfterFinder
+                )
+            }
+            .padding(.top, 6)
         }
+    }
+}
+
+/// A native radio-style row for choosing a `DeletionMode`, with a title, an SF
+/// Symbol, a description, and a proper selection ring.
+private struct DeletionModeRow: View {
+    let mode: DeletionMode
+    @Binding var selection: DeletionMode
+
+    private var isSelected: Bool { selection == mode }
+
+    var body: some View {
+        Button {
+            selection = mode
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .font(.body)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Label(mode.title, systemImage: mode.systemImage)
+                        .labelStyle(.titleAndIcon)
+                    Text(mode.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(mode.title). \(mode.subtitle)")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
@@ -213,7 +250,6 @@ private struct SecurityContent: View {
 // MARK: - Advanced
 
 private struct AdvancedContent: View {
-    @AppStorage(AppSettings.hapticsEnabledKey) private var haptics = true
     @State private var didReset = false
 
     var body: some View {
@@ -250,8 +286,7 @@ private struct AdvancedContent: View {
         let defaults = UserDefaults.standard
         for key in [
             AppSettings.showDockIconKey,
-            AppSettings.hapticsEnabledKey,
-            AppSettings.uninstallMoveToTrashKey,
+            AppSettings.deletionModeKey,
             AppSettings.quitAfterFinderKey,
             AppSettings.scanSystemLevelKey,
             AppSettings.autoScanLeftoversKey,
@@ -264,7 +299,6 @@ private struct AdvancedContent: View {
         ] {
             defaults.removeObject(forKey: key)
         }
-        haptics = true
     }
 }
 
@@ -407,11 +441,13 @@ private struct AboutContent: View {
                     .frame(width: 84, height: 84)
                     .accessibilityHidden(true)
                 Text("uninstally")
-                    .font(.system(.title2, design: .rounded).weight(.bold))
+                    .font(.title2).fontWeight(.semibold)
                 Text(version).font(.callout).foregroundStyle(.secondary)
                 Text("A native macOS uninstaller by Codenta.")
                     .font(.callout).foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                Link("codenta.us", destination: URL(string: "https://codenta.us/")!)
+                    .font(.callout.weight(.medium))
                 HStack(spacing: 12) {
                     Link(destination: URL(string: "https://codenta.us/")!) {
                         Label("Website", systemImage: "safari")

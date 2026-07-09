@@ -4,6 +4,33 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.4.5] — 2026-07-09
+
+### Added
+- **Uninstall behavior setting** — choose how removed files are disposed of:
+  **Move to Trash** (default, recoverable) or **Permanently Delete**. The choice
+  is shown clearly in the confirmation ("…move this app and N related files to
+  Trash" vs. a permanent-delete warning with a **Delete Permanently** button) and
+  is remembered across launches.
+
+### Changed
+- **Native macOS redesign.** A titled window with a unified toolbar, **translucent
+  window materials**, native button and list styles, a Finder-style floating
+  sidebar, native grouped Settings sections, and the system typography hierarchy —
+  so Uninstally feels at home next to Finder and System Settings.
+- **About** now shows a direct link to [codenta.us](https://codenta.us/).
+
+### Fixed
+- **Instant UI after uninstalling.** Removing an app no longer triggers a full
+  rescan of every installed application, so the removed app disappears
+  immediately with a smooth animation (optimistic in-memory update, then a
+  Finder-sync nudge) instead of lingering for several seconds.
+
+### Removed
+- **Haptic feedback** has been removed entirely. macOS doesn't offer reliable,
+  general-purpose haptics for this kind of app, so the feature and its Settings
+  toggle are gone. The now-empty General settings section was removed too.
+
 ## [1.4.4] — 2026-07-09
 
 ### Changed
@@ -113,6 +140,7 @@ All notable changes to Uninstally are documented here. This project follows
 - Batch uninstall, leftover scanner, and Homebrew package support.
 - Progress, safety confirmation and completion screens.
 
+[1.4.5]: https://github.com/gostonx/uninstally/releases/tag/v1.4.5
 [1.4.4]: https://github.com/gostonx/uninstally/releases/tag/v1.4.4
 [1.4.3]: https://github.com/gostonx/uninstally/releases/tag/v1.4.3
 [1.4.2]: https://github.com/gostonx/uninstally/releases/tag/v1.4.2

@@ -42,6 +42,7 @@ struct SettingsView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(width: 840, height: 580)
+        .translucentWindowBackground()
     }
 
     private var page: some View {
@@ -60,7 +61,6 @@ struct SettingsView: View {
             }
             .coordinateSpace(.named(space))
             .scrollContentBackground(.hidden)
-            .background(VibrantBackground())
             .onChange(of: selection) { _, newValue in
                 scroll(to: newValue, proxy: proxy)
             }
@@ -107,6 +107,5 @@ struct SettingsView: View {
         guard let active, active != selection else { return }
         spyDriven = true
         selection = active
-        HapticManager.shared.sectionChanged()
     }
 }

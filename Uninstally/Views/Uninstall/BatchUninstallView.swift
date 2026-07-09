@@ -52,7 +52,7 @@ struct BatchUninstallView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Batch Uninstall")
-                .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                .font(.largeTitle.weight(.bold))
             Text("\(model.apps.count) applications • about \(Format.bytes(model.totalEstimatedBytes)) reclaimable")
                 .foregroundStyle(.secondary)
         }
@@ -60,18 +60,22 @@ struct BatchUninstallView: View {
     }
 
     private var actionBar: some View {
-        HStack {
-            Label("This action cannot be undone.", systemImage: "exclamationmark.triangle.fill")
+        let mode = DeletionMode.stored
+        return HStack {
+            Label(mode == .permanent
+                    ? "This will permanently delete the selected apps. This action cannot be undone."
+                    : "The selected apps and their files will be moved to the Trash.",
+                  systemImage: mode == .permanent ? "exclamationmark.triangle.fill" : "arrow.uturn.backward.circle.fill")
                 .font(.caption)
-                .foregroundStyle(.orange)
+                .foregroundStyle(mode == .permanent ? .red : .secondary)
             Spacer()
             Button("Cancel") { coordinator.showBrowser() }
-                .buttonStyle(.quiet)
+                .buttonStyle(.bordered).controlSize(.large)
                 .keyboardShortcut(.cancelAction)
-            Button("Uninstall \(model.apps.count) Apps") {
+            Button(mode == .permanent ? "Delete \(model.apps.count) Apps" : "Uninstall \(model.apps.count) Apps") {
                 Task { await model.run() }
             }
-            .buttonStyle(.destructiveAction)
+            .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
             .keyboardShortcut(.defaultAction)
         }
         .padding(16)
@@ -110,7 +114,7 @@ struct BatchUninstallView: View {
                 .font(.system(size: 90))
                 .foregroundStyle(.green)
             Text("Batch Complete")
-                .font(.system(.title, design: .rounded).weight(.bold))
+                .font(.title.weight(.semibold))
             Text("Removed \(model.results.count) applications")
                 .foregroundStyle(.secondary)
             HStack(spacing: 0) {
@@ -120,10 +124,13 @@ struct BatchUninstallView: View {
             }
             .padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             Button("Done") {
-                Task { await coordinator.browserModel.load() }
+                // Optimistically drop every app that was actually removed, with no
+                // full rescan, so the browser reflects the changes instantly.
+                let removed = Set(model.apps.filter { !FileSystemUtil.exists($0.url) }.map(\.id))
+                coordinator.browserModel.remove(ids: removed)
                 coordinator.showBrowser()
             }
-            .buttonStyle(.prominentAction)
+            .buttonStyle(.borderedProminent).controlSize(.large)
             .keyboardShortcut(.defaultAction)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

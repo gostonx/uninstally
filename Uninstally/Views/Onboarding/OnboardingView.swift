@@ -65,7 +65,7 @@ struct OnboardingView: View {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { page += 1 }
                     }
                 }
-                .buttonStyle(.prominentAction)
+                .buttonStyle(.borderedProminent).controlSize(.large)
                 .keyboardShortcut(.defaultAction)
             }
             .padding(24)
@@ -95,7 +95,7 @@ private struct OnboardingPageView: View {
                 .scaleEffect(appeared ? 1 : 0.6)
                 .opacity(appeared ? 1 : 0)
             Text(page.title)
-                .font(.system(.title, design: .rounded).weight(.bold))
+                .font(.title.weight(.semibold))
                 .multilineTextAlignment(.center)
             Text(page.subtitle)
                 .font(.body)

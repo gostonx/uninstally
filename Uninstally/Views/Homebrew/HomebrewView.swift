@@ -61,7 +61,7 @@ struct HomebrewView: View {
                                 ProgressView().controlSize(.small)
                             } else {
                                 Button("Uninstall") { confirming = package }
-                                    .buttonStyle(.quiet)
+                                    .buttonStyle(.bordered).controlSize(.large)
                             }
                         }
                     }
@@ -134,7 +134,7 @@ private struct HomebrewConfirmSheet: View {
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
-                    .buttonStyle(.quiet)
+                    .buttonStyle(.bordered).controlSize(.large)
                     .keyboardShortcut(.cancelAction)
                 Button("Uninstall") {
                     Task {
@@ -145,7 +145,7 @@ private struct HomebrewConfirmSheet: View {
                         }
                     }
                 }
-                .buttonStyle(.destructiveAction)
+                .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
             }
         }
         .padding(24)

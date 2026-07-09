@@ -96,10 +96,10 @@ struct UninstallReviewView: View {
             }
             Spacer()
             Button("Cancel") { cancel() }
-                .buttonStyle(.quiet)
+                .buttonStyle(.bordered).controlSize(.large)
                 .keyboardShortcut(.cancelAction)
             Button("Uninstall") { model.requestConfirmation() }
-                .buttonStyle(.destructiveAction)
+                .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
                 .keyboardShortcut(.defaultAction)
                 .disabled((model.plan?.selectedCount ?? 0) == 0)
         }

@@ -26,7 +26,7 @@ struct CompletionView: View {
 
             VStack(spacing: 6) {
                 Text(result.succeeded ? "Successfully Removed" : "Removed with Issues")
-                    .font(.system(.title, design: .rounded).weight(.bold))
+                    .font(.title.weight(.semibold))
                 Text(result.appName)
                     .font(.title3)
                     .foregroundStyle(.secondary)
@@ -48,7 +48,7 @@ struct CompletionView: View {
             }
 
             Button("Done", action: onDone)
-                .buttonStyle(.prominentAction)
+                .buttonStyle(.borderedProminent).controlSize(.large)
                 .keyboardShortcut(.defaultAction)
                 .padding(.top, 4)
 

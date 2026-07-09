@@ -25,11 +25,12 @@ enum UninstallEvent: Sendable {
 /// as the work proceeds so the UI never has to poll.
 struct UninstallEngine: Sendable {
 
-    /// Runs the uninstall for `plan`, returning a stream of progress + a final result.
-    func run(plan: UninstallPlan) -> AsyncStream<UninstallEvent> {
+    /// Runs the uninstall for `plan` using the given deletion `mode`, returning a
+    /// stream of progress + a final result.
+    func run(plan: UninstallPlan, mode: DeletionMode) -> AsyncStream<UninstallEvent> {
         AsyncStream { continuation in
             let task = Task.detached(priority: .userInitiated) {
-                await Self.perform(plan: plan, continuation: continuation)
+                await Self.perform(plan: plan, mode: mode, continuation: continuation)
                 continuation.finish()
             }
             continuation.onTermination = { _ in task.cancel() }
@@ -40,6 +41,7 @@ struct UninstallEngine: Sendable {
 
     private static func perform(
         plan: UninstallPlan,
+        mode: DeletionMode,
         continuation: AsyncStream<UninstallEvent>.Continuation
     ) async {
         let start = Date()
@@ -73,18 +75,25 @@ struct UninstallEngine: Sendable {
 
         emitProgress(currentPath: "Preparing…")
 
-        // 1. Trash user-domain items individually so we can report per-file progress.
+        // 1. Remove user-domain items individually so we can report per-file
+        //    progress. In Trash mode they move to the Trash (recoverable); in
+        //    Permanent mode they are deleted outright — both via native FileManager.
         for item in userItems {
             if Task.isCancelled { break }
             emitProgress(currentPath: item.displayPath)
             do {
-                try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+                switch mode {
+                case .trash:
+                    try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+                case .permanent:
+                    try FileManager.default.removeItem(at: item.url)
+                }
                 bytesRemoved += item.sizeBytes
             } catch {
                 // If the item is simply gone already, treat it as success.
                 if FileSystemUtil.exists(item.url) {
                     failures.append(FailedRemoval(path: item.displayPath, reason: error.localizedDescription))
-                    Logger.engine.error("Failed to trash \(item.url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+                    Logger.engine.error("Failed to remove \(item.url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 } else {
                     bytesRemoved += item.sizeBytes
                 }
@@ -120,6 +129,17 @@ struct UninstallEngine: Sendable {
             duration: Date().timeIntervalSince(start),
             failures: failures
         )
+
+        // Nudge Finder / Launch Services so the removed app disappears from open
+        // Finder windows without a manual refresh. Trashing already emits FS
+        // events; this covers the containing directories explicitly.
+        let changedDirs = Set(items.map { $0.url.deletingLastPathComponent().path })
+        await MainActor.run {
+            for dir in changedDirs {
+                NSWorkspace.shared.noteFileSystemChanged(dir)
+            }
+        }
+
         continuation.yield(.finished(result))
     }
 }

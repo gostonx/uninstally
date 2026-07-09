@@ -54,15 +54,15 @@ struct LeftoverScannerView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Orphaned Files")
-                                .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                                .font(.largeTitle.weight(.bold))
                             Text("\(model.items.count) items • \(Format.bytes(model.totalBytes)) total")
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Select All") { model.selectAll(true) }
-                            .buttonStyle(.quiet)
+                            .buttonStyle(.bordered).controlSize(.large)
                         Button("Deselect All") { model.selectAll(false) }
-                            .buttonStyle(.quiet)
+                            .buttonStyle(.bordered).controlSize(.large)
                     }
 
                     ForEach(model.groupedItems, id: \.category) { group in
@@ -112,7 +112,7 @@ struct LeftoverScannerView: View {
             Button("Remove Selected") {
                 Task { await model.removeSelected() }
             }
-            .buttonStyle(.destructiveAction)
+            .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
             .disabled(model.selectedItems.isEmpty || model.isRemoving)
         }
         .padding(16)

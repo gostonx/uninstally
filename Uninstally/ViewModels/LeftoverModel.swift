@@ -77,7 +77,7 @@ final class LeftoverModel {
         let plan = UninstallPlan(app: syntheticApp, items: removable)
         let engine = UninstallEngine()
         var reclaimed: Int64 = 0
-        for await event in engine.run(plan: plan) {
+        for await event in engine.run(plan: plan, mode: DeletionMode.stored) {
             if case .finished(let result) = event { reclaimed = result.reclaimedBytes }
         }
         lastReclaimed = reclaimed

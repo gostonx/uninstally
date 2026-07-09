@@ -24,11 +24,12 @@ struct UninstallyApp: App {
                 .onOpenURL { coordinator.open($0) }
                 .onAppear { appDelegate.attach(coordinator) }
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 960, height: 680)
+        .defaultSize(width: 1000, height: 680)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            SidebarCommands()
             CommandGroup(after: .toolbar) {
                 Button("Refresh Applications") {
                     Task { await coordinator.browserModel.load() }

@@ -40,7 +40,7 @@ struct ReclaimBadge: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(Format.bytes(bytes))
-                .font(.system(.title, design: .rounded).weight(.bold))
+                .font(.title.weight(.semibold))
                 .contentTransition(.numericText())
             Text(count.map { "\($0) items • reclaimable" } ?? "reclaimable")
                 .font(.caption)

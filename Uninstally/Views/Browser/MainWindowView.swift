@@ -36,9 +36,6 @@ struct MainWindowView: View {
             if browser.apps.isEmpty { await browser.load() }
             collections.prune(installedKeys: browser.installedKeys)
         }
-        .onChange(of: selection) { _, _ in
-            HapticManager.shared.sectionChanged()
-        }
         .sheet(isPresented: $showCustomize) {
             CustomizeAppSidebarView(manager: sidebarManager, collections: collections, browser: browser)
         }
@@ -107,8 +104,7 @@ struct MainWindowView: View {
             }
         }
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .top) { brandHeader }
-        .safeAreaInset(edge: .bottom) { customizeBar }
+        .safeAreaInset(edge: .bottom) { sidebarFooter }
     }
 
     private func filterRow(_ filter: SmartFilter) -> some View {
@@ -176,50 +172,41 @@ struct MainWindowView: View {
         }
     }
 
-    private var brandHeader: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "trash.fill")
-                .font(.title3)
-                .foregroundStyle(Color.accentColor)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("uninstally")
-                    .font(.headline)
-                Text("by Codenta")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+    private var sidebarFooter: some View {
+        HStack(spacing: 2) {
             SettingsLink {
                 Image(systemName: "gearshape")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
             .help("Settings")
             .accessibilityLabel("Open Settings")
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(.bar)
-    }
 
-    private var customizeBar: some View {
-        VStack(spacing: 0) {
-            Divider()
+            Button {
+                createCollection()
+            } label: {
+                Image(systemName: "plus")
+            }
+            .buttonStyle(.borderless)
+            .help("New Collection")
+            .accessibilityLabel("New Collection")
+
+            Spacer()
+
             Button {
                 showCustomize = true
             } label: {
-                Label("Customize Sidebar…", systemImage: "slider.horizontal.3")
-                    .font(.callout)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
+                Image(systemName: "slider.horizontal.3")
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .help("Reorder or hide sidebar sections and manage Collections")
+            .buttonStyle(.borderless)
+            .help("Customize sidebar and Collections")
+            .accessibilityLabel("Customize Sidebar")
         }
+        .font(.body)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
 
     private func createCollection() {

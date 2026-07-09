@@ -77,7 +77,6 @@ final class CustomTabManager {
         var tab = CustomTab(name: name, symbol: symbol)
         if let initialKey { tab.appKeys = [initialKey] }
         tabs.append(tab)
-        HapticManager.shared.itemSelected()
         return tab
     }
 
@@ -97,24 +96,19 @@ final class CustomTabManager {
 
     func move(fromOffsets: IndexSet, toOffset: Int) {
         tabs.move(fromOffsets: fromOffsets, toOffset: toOffset)
-        HapticManager.shared.reorderMoved()
     }
 
     func add(_ key: String, to id: UUID) {
         guard let i = tabs.firstIndex(where: { $0.id == id }) else { return }
         guard !tabs[i].appKeys.contains(key) else { return }
         tabs[i].appKeys.append(key)
-        HapticManager.shared.itemSelected()
     }
 
     func add(_ keys: [String], to id: UUID) {
         guard let i = tabs.firstIndex(where: { $0.id == id }) else { return }
-        var changed = false
         for key in keys where !tabs[i].appKeys.contains(key) {
             tabs[i].appKeys.append(key)
-            changed = true
         }
-        if changed { HapticManager.shared.itemSelected() }
     }
 
     func remove(_ key: String, from id: UUID) {

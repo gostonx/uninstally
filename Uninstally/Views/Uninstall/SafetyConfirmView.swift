@@ -6,10 +6,33 @@ import SwiftUI
 struct SafetyConfirmView: View {
     let app: AppInfo
     let plan: UninstallPlan
+    let mode: DeletionMode
     let onCancel: () -> Void
     let onConfirm: () -> Void
 
     @State private var appeared = false
+
+    /// A plain-language summary of what will happen, e.g. "Uninstally will move
+    /// this app and 37 related files to Trash."
+    private var behaviorSummary: String {
+        let count = plan.selectedCount
+        let items = count == 1 ? "1 item" : "\(count) items"
+        switch mode {
+        case .trash:
+            return "Uninstally will move this app and \(items) to the Trash."
+        case .permanent:
+            return "Uninstally will permanently delete this app and \(items)."
+        }
+    }
+
+    private var warning: (text: String, icon: String) {
+        switch mode {
+        case .trash:
+            return ("App and related files will be moved to Trash. You can restore them until Trash is emptied.", "arrow.uturn.backward.circle.fill")
+        case .permanent:
+            return ("This will permanently delete the application and associated files. This action cannot be undone.", "exclamationmark.triangle.fill")
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -26,7 +49,7 @@ struct SafetyConfirmView: View {
                         Text("Uninstall \(app.name)?")
                             .font(.title2.weight(.bold))
                             .multilineTextAlignment(.center)
-                        Text("Uninstally will remove the application and all of its associated files.")
+                        Text(behaviorSummary)
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -55,22 +78,26 @@ struct SafetyConfirmView: View {
                     }
                     .padding(.vertical, 6)
 
-                    Label("This action cannot be undone.", systemImage: "exclamationmark.triangle.fill")
+                    Label(warning.text, systemImage: warning.icon)
                         .font(.callout.weight(.medium))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(mode == .permanent ? .red : .orange)
+                        .multilineTextAlignment(.center)
                         .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(.orange.opacity(0.12), in: Capsule())
+                        .background((mode == .permanent ? Color.red : Color.orange).opacity(0.12),
+                                    in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     HStack(spacing: 12) {
                         Button("Cancel", action: onCancel)
-                            .buttonStyle(.quiet)
+                            .buttonStyle(.bordered).controlSize(.large)
                             .keyboardShortcut(.cancelAction)
-                        Button("Uninstall", action: onConfirm)
-                            .buttonStyle(.destructiveAction)
+                        Button(mode.confirmTitle, action: onConfirm)
+                            .buttonStyle(.borderedProminent)
+                            .tint(mode == .permanent ? .red : .accentColor)
+                            .controlSize(.large)
                             .keyboardShortcut(.defaultAction)
                     }
                 }
-                .frame(width: 380)
+                .frame(width: 400)
             }
             .scaleEffect(appeared ? 1 : 0.92)
             .opacity(appeared ? 1 : 0)

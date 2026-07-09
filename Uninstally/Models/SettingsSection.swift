@@ -7,7 +7,6 @@ import Foundation
 /// type owns the display metadata (title, icon, subtitle) so the UI never
 /// hard-codes strings.
 enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
-    case general
     case updates
     case appearance
     case uninstall
@@ -20,7 +19,6 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
 
     var title: String {
         switch self {
-        case .general: return "General"
         case .updates: return "Updates"
         case .appearance: return "Appearance"
         case .uninstall: return "Uninstall Settings"
@@ -33,7 +31,6 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
 
     var systemImage: String {
         switch self {
-        case .general: return "gearshape"
         case .updates: return "arrow.triangle.2.circlepath"
         case .appearance: return "paintbrush"
         case .uninstall: return "trash"
@@ -47,7 +44,6 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
     /// A short, System-Settings-style subtitle shown under each section header.
     var subtitle: String {
         switch self {
-        case .general: return "Feedback and everyday behaviour."
         case .updates: return "Keep Uninstally up to date."
         case .appearance: return "How Uninstally looks and where it lives."
         case .uninstall: return "What happens when you remove an app."
@@ -60,8 +56,4 @@ enum SettingsSection: String, Codable, CaseIterable, Identifiable, Hashable, Sen
 
     /// Tint used for the section's icon badge.
     var accentsRed: Bool { self == .security || self == .uninstall }
-
-    /// Whether the user may hide this section from the navigation sidebar.
-    /// General stays available so the sidebar is never empty.
-    var canDisable: Bool { self != .general }
 }

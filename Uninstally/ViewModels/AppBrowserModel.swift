@@ -146,4 +146,23 @@ final class AppBrowserModel {
     var installedKeys: Set<String> {
         Set(apps.map(\.collectionKey))
     }
+
+    // MARK: - Optimistic removal
+
+    /// Removes apps from the in-memory model immediately after a successful
+    /// uninstall, without triggering a full filesystem rescan. Every derived value
+    /// (visible list, sidebar counts, Collection counts, sizes) updates instantly
+    /// because they are computed from `apps`.
+    func remove(ids: Set<AppInfo.ID>) {
+        guard !ids.isEmpty else { return }
+        apps.removeAll { ids.contains($0.id) }
+        selection.subtract(ids)
+        duplicatedIdentifiers = duplicatedIdentifiers.filter { key in
+            apps.contains { $0.bundleIdentifier == key }
+        }
+    }
+
+    func remove(id: AppInfo.ID) {
+        remove(ids: [id])
+    }
 }

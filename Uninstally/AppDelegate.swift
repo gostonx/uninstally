@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Apply the user's Dock-icon preference (defaults to accessory: no Dock or
         // menu-bar presence).
         DockIconController.applyStoredPreference()
+        AppSettings.removeObsoleteDefaults()
         NotificationService.shared.requestAuthorizationIfNeeded()
         // Even as an accessory app, bring our window to the front on a normal
         // launch so it doesn't open hidden behind other windows.

@@ -17,7 +17,7 @@ struct AppHeaderView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(app.name)
-                        .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                        .font(.largeTitle.weight(.bold))
                         .lineLimit(2)
                     if !app.developer.isEmpty {
                         Text(app.developer)

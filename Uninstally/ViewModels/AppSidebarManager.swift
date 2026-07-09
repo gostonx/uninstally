@@ -69,7 +69,6 @@ final class AppSidebarManager {
 
     func move(fromOffsets: IndexSet, toOffset: Int) {
         items.move(fromOffsets: fromOffsets, toOffset: toOffset)
-        HapticManager.shared.reorderMoved()
     }
 
     /// Shows/hides an item, refusing to hide the last visible one.
@@ -82,7 +81,6 @@ final class AppSidebarManager {
     func togglePin(_ id: AppSidebarItemConfig.ID) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].isPinned.toggle()
-        HapticManager.shared.itemSelected()
     }
 
     func isPinned(_ filter: SmartFilter) -> Bool {

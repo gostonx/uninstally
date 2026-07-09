@@ -26,7 +26,7 @@ struct UninstallProgressView: View {
                     .animation(.easeInOut(duration: 0.3), value: fraction)
                 VStack(spacing: 2) {
                     Text("\(Int(fraction * 100))")
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .font(.system(size: 40, weight: .semibold))
                         .contentTransition(.numericText())
                         .monospacedDigit()
                     Text("percent")

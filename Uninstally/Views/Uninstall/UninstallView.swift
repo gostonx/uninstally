@@ -27,6 +27,7 @@ struct UninstallView: View {
                 SafetyConfirmView(
                     app: model.app,
                     plan: plan,
+                    mode: model.deletionMode,
                     onCancel: { model.cancelConfirmation() },
                     onConfirm: { Task { await model.uninstall() } }
                 )
@@ -47,8 +48,13 @@ struct UninstallView: View {
         if model.isDedicatedSession {
             NSApplication.shared.terminate(nil)
         } else {
+            // Optimistic update: if the app bundle is actually gone, drop it from
+            // the in-memory model immediately (no full rescan). The browser then
+            // appears with the app already removed and every derived count updated.
+            if !FileSystemUtil.exists(model.app.url) {
+                coordinator.browserModel.remove(id: model.app.id)
+            }
             coordinator.browserModel.selection.removeAll()
-            Task { await coordinator.browserModel.load() }
             coordinator.showBrowser()
         }
     }

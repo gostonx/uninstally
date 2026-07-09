@@ -87,10 +87,14 @@ final class UninstallModel {
 
     // MARK: - Uninstall
 
+    /// The user's current deletion behaviour (Trash vs. permanent), read fresh so
+    /// it always reflects the latest Settings choice.
+    var deletionMode: DeletionMode { DeletionMode.stored }
+
     func uninstall() async {
         guard let plan else { return }
         phase = .uninstalling
-        for await event in engine.run(plan: plan) {
+        for await event in engine.run(plan: plan, mode: deletionMode) {
             switch event {
             case .progress(let progress):
                 self.progress = progress

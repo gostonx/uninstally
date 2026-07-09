@@ -57,7 +57,7 @@ struct AppBrowserView: View {
     }
 
     private var grid: some View {
-        HapticScrollView {
+        ScrollView {
             LazyVGrid(
                 columns: [GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 18)],
                 spacing: 18
@@ -70,9 +70,11 @@ struct AppBrowserView: View {
                         collectionID: currentCollectionID
                     )
                     .onTapGesture { handleTap(app) }
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
             .padding(20)
+            .animation(.snappy(duration: 0.28), value: model.visibleApps)
         }
     }
 
@@ -92,6 +94,7 @@ struct AppBrowserView: View {
             }
         }
         .listStyle(.inset)
+        .animation(.snappy(duration: 0.28), value: model.visibleApps)
         .scrollContentBackground(.hidden)
     }
 
@@ -191,11 +194,11 @@ struct AppBrowserView: View {
             Button("Cancel") {
                 withAnimation(.spring) { model.selection.removeAll(); isSelecting = false }
             }
-            .buttonStyle(.quiet)
+            .buttonStyle(.bordered).controlSize(.large)
             Button("Uninstall \(model.selection.count)") {
                 coordinator.startBatch(for: model.selectedApps)
             }
-            .buttonStyle(.destructiveAction)
+            .buttonStyle(.borderedProminent).tint(.red).controlSize(.large)
         }
         .padding(16)
         .background(.bar)
@@ -206,7 +209,6 @@ struct AppBrowserView: View {
     // MARK: - Actions
 
     private func handleTap(_ app: AppInfo) {
-        HapticManager.shared.itemSelected()
         if isSelecting {
             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                 if model.selection.contains(app.id) {
