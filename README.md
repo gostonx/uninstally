@@ -1,63 +1,56 @@
 # Uninstally
 
+[![Release](https://img.shields.io/github/v/release/gostonx/uninstally)](https://github.com/gostonx/uninstally/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gostonx/uninstally/ci.yml?branch=main)](https://github.com/gostonx/uninstally/actions)
+[![Homebrew Cask](https://img.shields.io/badge/Homebrew-Cask-blue?logo=homebrew)](https://github.com/gostonx/uninstally/releases/latest)
+[![License](https://img.shields.io/github/license/gostonx/uninstally)](LICENSE)
+
+A native macOS uninstaller built with SwiftUI. Remove apps and their leftover files safely — optionally move user files to the Trash, or permanently delete privileged items — with Homebrew support and a Finder right‑click integration.
+
 <p align="center">
   <img src="docs/uninstally-demo.gif" alt="Uninstally demo — uninstalling an app and its leftover files" width="80%" />
 </p>
 
-<p align="center">
-  <img src="docs/finder-menu.png" alt="Uninstall with Uninstally in the Finder right-click menu" width="49%" />
-  <img src="docs/uninstall-window.png" alt="Uninstally uninstall confirmation window showing removable files" width="49%" />
-</p>
-
-<p align="center">
-  <img src="docs/screenshot-3.png" alt="Uninstally screenshot" width="49%" />
-  <img src="docs/screenshot-4.png" alt="Uninstally screenshot" width="49%" />
-</p>
-
-A native macOS uninstaller by **Codenta**: the simplest, cleanest way to
-completely remove applications and every file they leave behind. Built entirely
-with SwiftUI and Apple's native frameworks (no Electron, no web tech).
-
-<p align="center">
-  <a href="https://codenta.us/"><b>Website</b></a> ·
-  <a href="https://github.com/gostonx/uninstally/releases/latest"><b>Download</b></a> ·
-  <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="https://codenta.us/">More from Codenta</a>
-</p>
-
-> Made by Codenta — explore all our macOS apps at **[codenta.us](https://codenta.us/)**.
+Quick links: [Download](https://github.com/gostonx/uninstally/releases/latest) · [Changelog](CHANGELOG.md) · [Docs](docs/) · [Website](https://codenta.us/)
 
 ---
 
-## Highlights
+## Table of contents
 
-- **Finder integration** — right-click any `.app` bundle → **"Uninstall with
-  Uninstally"** launches straight into a confirmation window.
-- **Smart, identifier-driven detection** — matches artefacts by *bundle
-  identifier* (and helper namespaces harvested from the bundle), not just by
-  folder name, across the entire Library hierarchy.
-- **Standalone browser** — searchable grid/list of installed apps with sorting
-  and smart filters (Largest, Recently Installed/Opened, Never Opened, With
-  Leftovers, Broken Installs, Duplicated across drives).
-- **Batch uninstall** — select several apps and remove them sequentially with an
-  aggregate storage summary.
-- **Leftover scanner** — finds orphaned support files, caches, containers,
-  preferences, logs and old installers from apps you no longer have.
-- **Homebrew support** — lists casks/formulae, shows dependency relationships and
-  uninstalls (with optional `--zap` leftover removal).
-- **Safe engine** — user-domain files go to the Trash (reversible); privileged
-  items are removed behind a single administrator prompt. Live progress with the
-  current file, percentage and ETA, then a completion summary.
-- **Polished, HIG-native UI** — translucent materials, rounded corners, spring
-  animations, SF Symbols, automatic light/dark, VoiceOver labels, drag-and-drop,
-  keyboard shortcuts, native notifications and onboarding.
-- **Accessory app** — no Dock icon, no menu-bar item. It appears only when opened
-  directly or from Finder, and quits automatically after a Finder-initiated
-  uninstall.
-- **Automatic, secure updates** — powered by [Sparkle](https://sparkle-project.org)
-  with EdDSA-signed releases delivered through a signed appcast at
-  `https://codenta.us/appcast.xml`. Checks on launch and every 24 hours, with
-  stable/beta/nightly channels. See [docs/UPDATES.md](docs/UPDATES.md).
+- [Quick start](#quick-start)
+- [Requirements](#requirements)
+- [Install](#install)
+- [First launch & Gatekeeper](#first-launch--gatekeeper)
+- [Build & run (developer)](#build--run-developer)
+- [Features](#features)
+- [Troubleshooting](#troubleshooting)
+- [Releases & updates](#releases--updates)
+- [Architecture & internals](#architecture--internals)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
+
+---
+
+## Quick start
+
+Install (Homebrew, recommended)
+
+```sh
+brew tap gostonx/tap
+brew install --cask uninstally
+```
+
+Or download the latest DMG from Releases and drag to /Applications.
+
+Open the app, grant Full Disk Access for deepest scans, then right‑click any `.app` in Finder → "Uninstall with Uninstally" to run a confirmation + removal flow.
+
+---
+
+## Requirements
+
+- macOS 14.0 or later (built against macOS 26 SDK / Xcode 26)
+- Xcode 16 or later (for building from source)
 
 ---
 
@@ -66,146 +59,125 @@ with SwiftUI and Apple's native frameworks (no Electron, no web tech).
 ### Homebrew (recommended)
 
 ```sh
-brew install --cask gostonx/tap/uninstally
-```
-
-Or tap first, then install:
-
-```sh
 brew tap gostonx/tap
 brew install --cask uninstally
 ```
 
-Update or remove later:
+Uninstall / update:
 
 ```sh
-brew upgrade --cask uninstally     # update to the newest release
-brew uninstall --cask uninstally   # remove the app
-brew uninstall --cask --zap uninstally   # remove the app and its leftover files
+brew upgrade --cask uninstally
+brew uninstall --cask uninstally
+brew uninstall --cask --zap uninstally   # remove app + leftovers
 ```
 
 ### Direct download
 
-Grab the latest **`Uninstally.dmg`** from the
-[Releases page](https://github.com/gostonx/uninstally/releases/latest), open it,
-and drag **Uninstally** into your **Applications** folder.
+Get Uninstally.dmg from the Releases page, open it, and drag **Uninstally** into **Applications**.
 
-### First launch (unsigned build)
+---
 
-Uninstally is currently ad-hoc signed and not notarized, so macOS Gatekeeper may
-block the first launch. Either **right-click the app → Open** and confirm, or
-clear the quarantine flag:
+## First launch & Gatekeeper
+
+Unsigned/ad-hoc builds may be blocked by Gatekeeper. To open:
+
+- Right-click the app → Open → confirm
+- or clear quarantine:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Uninstally.app
 ```
 
-(With Homebrew you can also install without quarantine:
-`brew install --cask --no-quarantine gostonx/tap/uninstally`.)
-
-Then enable the Finder menu item in **System Settings → General → Login Items &
-Extensions → Finder Extensions**.
+If the Finder extension does not appear, run the app once (so Launch Services registers it), then enable the extension in System Settings → General → Login Items & Extensions → Finder Extensions.
 
 ---
 
-## Requirements
+## Build & run (developer)
 
-- macOS 14.0 or later (built and verified against the macOS 26 SDK / Xcode 26)
-- Xcode 16 or later
-
-## Build & Run
-
-```bash
-open Uninstally.xcodeproj
-# Select the "Uninstally" scheme, then Run (⌘R)
-```
-
-Or from the command line:
+Open the Xcode project and run the `Uninstally` scheme (⌘R), or build from the command line:
 
 ```bash
 xcodebuild -project Uninstally.xcodeproj -scheme Uninstally \
   -configuration Debug -destination 'platform=macOS' build
 ```
 
-The project is configured for local **ad-hoc signing** (`CODE_SIGN_IDENTITY = "-"`)
-so it builds with no team. For distribution, set your `DEVELOPMENT_TEAM`, switch
-to automatic signing, and enable Hardened Runtime.
+Notes:
+- Project is configured for ad-hoc signing for local builds (`CODE_SIGN_IDENTITY = "-"`). For distribution set `DEVELOPMENT_TEAM` and enable automatic signing.
+- For distribution the project uses Sparkle and an appcast; see `docs/UPDATES.md` for update signing & channels.
 
 ### Enabling the Finder extension
 
 1. Run the app once so Launch Services registers it.
-2. Open **System Settings → General → Login Items & Extensions → Finder
-   Extensions** and enable **Uninstally Finder**.
-3. Right-click any application bundle in Finder to see **"Uninstall with
-   Uninstally"**.
+2. Open System Settings → General → Login Items & Extensions → Finder Extensions and enable **Uninstally Finder**.
+3. Right-click any `.app` bundle to see **"Uninstall with Uninstally"**.
 
 ### Full Disk Access
 
-Because a complete uninstaller must reach protected locations, the app runs
-outside the App Sandbox. Grant **Full Disk Access** (System Settings → Privacy &
-Security) for the deepest scans.
+Grant Full Disk Access (System Settings → Privacy & Security) to allow deep scans of protected locations.
 
 ---
 
-## Releasing & updates
+## Features
 
-Releases are fully automated. Push a version tag and GitHub Actions builds, signs,
-notarizes, and publishes everything:
-
-```sh
-git tag v1.4.0 && git push origin v1.4.0
-```
-
-- [docs/RELEASING.md](docs/RELEASING.md) — the release flow and channels
-- [docs/UPDATES.md](docs/UPDATES.md) — Sparkle, appcast, key rotation/revocation
-- [docs/SECRETS.md](docs/SECRETS.md) — required GitHub Actions secrets
-
-## Architecture
-
-MVVM with `@Observable` models and modern Swift concurrency (`async/await`,
-`AsyncStream`, task groups). Clean separation of concerns:
-
-```
-Uninstally/
-├── Uninstally/                  App target (file-system-synchronized group)
-│   ├── UninstallyApp.swift      @main App + scene
-│   ├── AppDelegate.swift        Accessory policy, file-open forwarding
-│   ├── Models/                  AppInfo, RemovableItem, UninstallPlan, …
-│   ├── Services/                Scanners, UninstallEngine, Homebrew, Icons, …
-│   ├── ViewModels/              AppCoordinator + Observable screen models
-│   ├── Views/                   Browser, Uninstall, Leftovers, Homebrew, …
-│   ├── Utilities/               Formatting, FileSystem, LibraryPaths, matching
-│   └── Assets.xcassets
-├── UninstallyFinder/            Finder Sync extension target
-│   └── FinderSync.swift
-├── Config/                      Info.plists & entitlements (build-setting refs)
-└── Uninstally.xcodeproj
-```
-
-### Key components
-
-| Layer | Type | Responsibility |
-|-------|------|----------------|
-| Scanning | `ApplicationScanner` | Enumerates installed apps + metadata |
-| Scanning | `AssociatedFileScanner` | Smart, identifier-driven artefact detection |
-| Scanning | `LeftoverScanner` | Orphaned-file detection |
-| Engine | `UninstallEngine` | Trash + elevated removal, streamed progress |
-| Integration | `HomebrewService` | Package listing, dependencies, uninstall |
-| Navigation | `AppCoordinator` | Routes standalone vs. Finder-initiated flows |
-
-### Notes on the removal strategy
-
-- User-domain artefacts are moved to the **Trash** (`FileManager.trashItem`),
-  giving a native Undo affordance.
-- System-domain artefacts (`/Library`, root-owned, privileged helpers) are
-  removed in a single elevated `rm` batch via `NSAppleScript`'s
-  `with administrator privileges`, so the user is prompted at most once.
+- Finder right-click integration to start uninstall flows
+- Smart identifier-driven detection (bundle identifier + helper namespaces)
+- Standalone browser: searchable grid/list of installed apps with rich filters
+- Batch uninstall and aggregate storage reclaim summaries
+- Leftover scanner for orphaned support files, caches, containers, preferences, logs, and installers
+- Homebrew cask/formula listing and uninstall (optional `--zap`)
+- Safe removal: user files → Trash; privileged removals behind single elevated prompt
+- Polished SwiftUI interface with VoiceOver labels, keyboard shortcuts, and native animations
+- Automatic updates via Sparkle with stable / beta / nightly channels
 
 ---
 
-## Safety
+## Troubleshooting
 
-Nothing is removed without an explicit confirmation that shows the app icon,
-name, reclaimable storage, item count and the warning **"This action cannot be
-undone."** Every matched artefact records *why* it matched, and all items are
-individually reviewable and de-selectable before you proceed.
+- Finder menu item not visible: ensure Finder Extensions are enabled and restart Finder (Option‑right‑click Finder icon → Relaunch).
+- Gatekeeper blocks unsigned build: use the right‑click → Open flow or xattr command above.
+- Leftover scan finds many items: review matched items and their matching reasons before proceeding; items are deselectable in the confirmation UI.
+- Homebrew cask not shown: ensure Homebrew is installed and accessible in the current PATH the app uses (relaunch app after installing Homebrew).
+
+---
+
+## Releases & updates
+
+Releases are automated: tags trigger CI to build, sign, notarize and publish. See `docs/RELEASING.md` and `docs/UPDATES.md` for the publishing flow, Sparkle configuration, and key rotation.
+
+---
+
+## Architecture & internals
+
+Short overview:
+- MVVM, Swift concurrency (`async/await`, `AsyncStream`)
+- Scanners: `ApplicationScanner`, `AssociatedFileScanner`, `LeftoverScanner`
+- Engine: `UninstallEngine` — Trash + elevated removal with streamed progress
+- Integration: `HomebrewService` and Finder Sync extension
+
+See `docs/ARCHITECTURE.md` for detailed design, file layout, and matching strategy.
+
+---
+
+## Contributing
+
+Contributions welcome. Please read `CONTRIBUTING.md` (if present) or follow these basics:
+- Fork → branch named `feat/...` or `fix/...` → open a PR
+- Run tests / Xcode build locally before opening a PR
+- Keep changes focused and document behaviour changes in a short PR description
+
+---
+
+## Security
+
+If you discover a security vulnerability, please report it privately (see `SECURITY.md` if present) or contact the maintainers via the repository's security policy.
+
+---
+
+## License
+
+See the LICENSE file for details.
+
+---
+## Changelog
+
+Full changelog: [CHANGELOG.md](CHANGELOG.md)
