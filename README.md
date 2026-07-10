@@ -19,12 +19,13 @@ Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and the
 
 ## Install
 
-### Homebrew (recommended)
+### Homebrew
 
 ```sh
-brew tap gostonx/tap
 brew install --cask uninstally
 ```
+
+If the tap is not yet trusted, Homebrew will ask you to trust it. Run `brew trust gostonx/tap` to proceed. This is standard behavior for any third-party tap and only needs to be done once.
 
 ```sh
 brew upgrade --cask uninstally
@@ -84,6 +85,9 @@ Enable the extension in System Settings → General → Login Items & Extensions
 
 **Gatekeeper blocks the app?**  
 Right-click the app → Open → confirm. Or clear quarantine: `xattr -dr com.apple.quarantine /Applications/Uninstally.app`
+
+**Homebrew says the tap is untrusted?**  
+Run `brew trust gostonx/tap` once. Homebrew requires this for third-party taps as a security measure.
 
 **Homebrew packages not showing?**  
 Make sure Homebrew is installed. Relaunch Uninstally after installing Homebrew so it can detect the binary.
