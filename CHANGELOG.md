@@ -4,7 +4,7 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
-## [1.7.2] — 2026-07-10
+## [1.7.3] — 2026-07-10
 
 ### Fixed
 - **Native macOS UI materials** — fixed a bug where translucent sidebar, cards,
