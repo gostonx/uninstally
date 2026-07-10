@@ -30,7 +30,10 @@ struct LeftoverScanner: Sendable {
             group.addTask { Self.scanBrokenAliases() }
 
             var results: [LeftoverItem] = []
-            for await batch in group { results.append(contentsOf: batch) }
+            for await batch in group {
+                if Task.isCancelled { break }
+                results.append(contentsOf: batch)
+            }
 
             var seen = Set<String>()
             return results
@@ -63,6 +66,7 @@ struct LeftoverScanner: Sendable {
 
         var orphans: [LeftoverItem] = []
         for child in children {
+            if Task.isCancelled { return orphans }
             let name = child.lastPathComponent
             guard let identifier = candidateIdentifier(from: name),
                   !isInstalled(identifier, installed: installed),

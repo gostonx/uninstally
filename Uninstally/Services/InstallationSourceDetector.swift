@@ -43,7 +43,7 @@ struct InstallationSourceDetector: Sendable {
         for version in versions {
             let appPath = "\(base)/\(version)"
             guard let apps = try? FileManager.default.contentsOfDirectory(atPath: appPath) else { continue }
-            for entry in apps where entry.hasSuffix(".app") {
+            for entry in apps where LibraryPaths.supportedBundleExtensions.contains((entry as NSString).pathExtension) {
                 if let bundle = Bundle(url: URL(fileURLWithPath: "\(appPath)/\(entry)")),
                    let id = bundle.bundleIdentifier {
                     return id
@@ -72,7 +72,7 @@ struct InstallationSourceDetector: Sendable {
 
     private func isDMGInstalled(appURL: URL) -> Bool {
         guard let metadata = try? appURL.resourceValues(forKeys: [.quarantinePropertiesKey]),
-              let quarantine = metadata.quarantineProperties as? [String: Any],
+              let quarantine = metadata.quarantineProperties,
               let origin = quarantine["LSQuarantineAgentName"] as? String else { return false }
         return origin.contains("DiskImageMounter") || origin.contains("hdiutil")
     }

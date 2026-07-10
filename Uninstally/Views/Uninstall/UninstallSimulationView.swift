@@ -38,7 +38,7 @@ struct UninstallSimulationView: View {
             }
             footer
         }
-        .navigationTitle("Uninstall Simulation")
+        .navigationTitle(model.app.isPlugin ? "Plugin Uninstall Simulation" : "Uninstall Simulation")
     }
 
     // MARK: - Header
@@ -163,7 +163,7 @@ private struct SummaryCard: View {
 
     private var lines: [(String, Int)] {
         [
-            ("Application", simulation.applicationCount),
+            (simulation.app.isPlugin ? "Audio Plugin" : "Application", simulation.applicationCount),
             ("Related Files", simulation.relatedFileCount),
             ("Login Items Removed", simulation.loginItemCount),
             ("Launch Agents Removed", simulation.launchAgentCount),

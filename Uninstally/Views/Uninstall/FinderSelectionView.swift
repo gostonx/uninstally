@@ -9,6 +9,7 @@ struct FinderSelectionView: View {
 
     @State private var rows: [Row] = []
     @State private var isScanning = true
+    @State private var scanTask: Task<Void, Never>?
 
     private struct Row: Identifiable {
         let app: AppInfo
@@ -26,7 +27,8 @@ struct FinderSelectionView: View {
             list
             footer
         }
-        .task { await simulateAll() }
+        .task { scanTask = Task { await simulateAll() } }
+        .onDisappear { scanTask?.cancel() }
     }
 
     private var header: some View {
@@ -79,7 +81,10 @@ struct FinderSelectionView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Cancel") { coordinator.cancelFinderSelection() }
+                Button("Cancel") {
+                    scanTask?.cancel()
+                    coordinator.cancelFinderSelection()
+                }
                     .controlSize(.large)
                     .keyboardShortcut(.cancelAction)
                 Button("Review Individually") { coordinator.reviewIndividually(apps) }
@@ -98,6 +103,7 @@ struct FinderSelectionView: View {
         rows = apps.map { Row(app: $0, fileCount: 0, bytes: 0) }
         let scanner = AssociatedFileScanner()
         for (index, app) in apps.enumerated() {
+            if Task.isCancelled { return }
             let items = await scanner.scan(for: app)
             let bytes = items.reduce(Int64(0)) { $0 + $1.sizeBytes }
             if index < rows.count {

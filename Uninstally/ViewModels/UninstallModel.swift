@@ -37,6 +37,8 @@ final class UninstallModel: Identifiable {
     private(set) var iconData: Data?
 
     private let simulator = UninstallSimulationManager()
+    private var scanTask: Task<Void, Never>?
+    private var deletionTask: Task<Void, Never>?
 
     init(app: AppInfo, isDedicatedSession: Bool) {
         self.app = app
@@ -46,11 +48,21 @@ final class UninstallModel: Identifiable {
 
     // MARK: - Simulation
 
-    func scan() async {
+    func startScan() {
+        scanTask = Task { await scan() }
+    }
+
+    func cancelScan() {
+        scanTask?.cancel()
+        scanTask = nil
+    }
+
+    private func scan() async {
         phase = .scanning
         let result = await simulator.run(for: app) { [weak self] step in
             self?.scanStep = step
         }
+        guard !Task.isCancelled else { return }
         self.simulation = result
         phase = .review
     }
@@ -106,9 +118,21 @@ final class UninstallModel: Identifiable {
     /// The user's current deletion behaviour, read fresh from Settings.
     var deletionMode: DeletionMode { DeletionMode.stored }
 
+    func startUninstall() {
+        deletionTask = Task { await uninstall() }
+    }
+
+    func startProceed() {
+        deletionTask = Task { await proceed() }
+    }
+
+    func cancelUninstall() {
+        deletionTask?.cancel()
+        deletionTask = nil
+    }
+
     func uninstall() async {
         guard simulation != nil else { return }
-        // Reuse the validated, simulated plan directly — no second scan.
         let plan = deletionPlan
         phase = .uninstalling
         for await event in DeletionExecutor().execute(plan: plan) {
@@ -116,6 +140,7 @@ final class UninstallModel: Identifiable {
             case .progress(let progress):
                 self.progress = progress
             case .finished(let result):
+                guard !Task.isCancelled else { return }
                 self.result = result
                 phase = .finished
                 NotificationService.shared.postUninstallComplete(result)

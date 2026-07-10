@@ -3,7 +3,8 @@ import FinderSync
 import os
 
 /// Finder Sync extension providing the **"Uninstall with Uninstally"** contextual
-/// menu item for `.app` bundles anywhere on the system.
+/// menu item for supported bundles (`.app`, `.component`, `.vst`, `.vst3`,
+/// `.aaxplugin`, `.clap`) anywhere on the system.
 ///
 /// The extension does no scanning itself. When invoked it hands the selected
 /// bundle to the main application through the private `uninstally://` URL scheme,
@@ -58,9 +59,11 @@ final class FinderSync: FIFinderSync {
 
     // MARK: - Helpers
 
-    /// Returns the currently selected items that are `.app` bundles.
+    /// Returns the currently selected items that are supported bundles
+    /// (`.app`, `.component`, `.vst`, `.vst3`, `.aaxplugin`, `.clap`).
     private func selectedAppBundles() -> [URL] {
+        let supported = Set(["app", "component", "vst", "vst3", "aaxplugin", "clap"])
         let selected = FIFinderSyncController.default().selectedItemURLs() ?? []
-        return selected.filter { $0.pathExtension == "app" }
+        return selected.filter { supported.contains($0.pathExtension) }
     }
 }

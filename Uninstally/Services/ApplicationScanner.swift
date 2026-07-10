@@ -2,18 +2,21 @@ import AppKit
 import Foundation
 import os
 
-/// Enumerates installed applications and extracts the metadata required by the UI.
+/// Enumerates installed applications and audio plug-ins, extracting the metadata
+/// required by the UI.
 ///
-/// The scan is fully asynchronous and performed off the main actor. Each `.app`
-/// bundle is inspected via `Bundle`/`Info.plist`; sizes are computed with the
-/// shared `FileSystemUtil`. Nothing here mutates the file system.
+/// The scan is fully asynchronous and performed off the main actor. Each `.app`,
+/// `.component`, `.vst`, `.vst3`, `.aaxplugin`, and `.clap` bundle is inspected
+/// via `Bundle`/`Info.plist`; sizes are computed with the shared `FileSystemUtil`.
+/// Nothing here mutates the file system.
 struct ApplicationScanner: Sendable {
 
-    /// Scans all known application directories and returns the discovered apps.
+    /// Scans all known application and plug-in directories and returns discovered items.
     func scan() async -> [AppInfo] {
         let standard = LibraryPaths.applicationDirectories
+        let plugins = LibraryPaths.pluginDirectories
         let custom = customScanPaths
-        let directories = standard + custom
+        let directories = standard + plugins + custom
         return await withTaskGroup(of: [AppInfo].self) { group in
             for directory in directories {
                 group.addTask { Self.scanDirectory(directory) }
@@ -55,21 +58,22 @@ struct ApplicationScanner: Sendable {
         ) else { return [] }
 
         var apps: [AppInfo] = []
-        for entry in entries where entry.pathExtension == "app" {
+        for entry in entries where LibraryPaths.isSupportedBundle(entry) {
             if let info = makeAppInfo(from: entry) {
                 apps.append(info)
             }
         }
         // Also inspect one level of nesting (e.g. /Applications/Utilities live in a
         // separate directory already, but some vendors nest their apps in a folder).
-        for entry in entries where entry.pathExtension != "app" {
+        for entry in entries where entry.pathExtension != "app"
+                                       && !LibraryPaths.supportedBundleExtensions.contains(entry.pathExtension) {
             guard (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
                   let nested = try? fm.contentsOfDirectory(
                       at: entry,
                       includingPropertiesForKeys: nil,
                       options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
                   ) else { continue }
-            for candidate in nested where candidate.pathExtension == "app" {
+            for candidate in nested where LibraryPaths.isSupportedBundle(candidate) {
                 if let info = makeAppInfo(from: candidate) { apps.append(info) }
             }
         }

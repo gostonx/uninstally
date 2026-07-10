@@ -6,37 +6,33 @@ enum FileSystemUtil {
 
     /// Computes the total allocated size of a file or directory tree, in bytes.
     ///
-    /// Uses `totalFileAllocatedSize` where available (matching Finder's notion of
-    /// "size on disk") and falls back to logical file size. Symbolic links are not
-    /// followed to avoid double-counting or escaping the tree.
+    /// Uses `/usr/bin/du -sk` for directories which is significantly faster than
+    /// `FileManager.enumerator` for large trees (LLM models, caches, containers).
+    /// Reports size in 1024-byte blocks as macOS Finder does.
     static func size(of url: URL) -> Int64 {
-        let keys: Set<URLResourceKey> = [
-            .isRegularFileKey, .totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .fileSizeKey, .isDirectoryKey,
-        ]
+        let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey, .totalFileAllocatedSizeKey, .fileSizeKey])
+        guard let rv = resourceValues else { return 0 }
 
-        guard let values = try? url.resourceValues(forKeys: keys) else { return 0 }
+        if rv.isDirectory == true {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/du")
+            process.arguments = ["-sk", url.path]
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = Pipe()
 
-        if values.isDirectory == true {
-            var total: Int64 = 0
-            guard let enumerator = fm.enumerator(
-                at: url,
-                includingPropertiesForKeys: Array(keys),
-                options: [],
-                errorHandler: { _, _ in true }
-            ) else { return 0 }
+            guard let _ = try? process.run() else { return 0 }
+            process.waitUntilExit()
 
-            for case let child as URL in enumerator {
-                guard let childValues = try? child.resourceValues(forKeys: keys),
-                      childValues.isRegularFile == true else { continue }
-                total += Int64(childValues.totalFileAllocatedSize
-                    ?? childValues.fileAllocatedSize
-                    ?? childValues.fileSize
-                    ?? 0)
-            }
-            return total
+            guard process.terminationStatus == 0 else { return 0 }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            guard let output = String(data: data, encoding: .utf8) else { return 0 }
+            let parts = output.components(separatedBy: .whitespaces)
+            guard let first = parts.first, let blocks = Int64(first) else { return 0 }
+            return blocks * 1024
         }
 
-        return Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+        return Int64(rv.totalFileAllocatedSize ?? rv.fileSize ?? 0)
     }
 
     /// Returns `true` when the item exists and is not writable by the current user,

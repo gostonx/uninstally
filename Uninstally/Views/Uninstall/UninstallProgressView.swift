@@ -5,6 +5,7 @@ import SwiftUI
 struct UninstallProgressView: View {
     let app: AppInfo
     let progress: UninstallProgress?
+    var onCancel: () -> Void = {}
 
     private var fraction: Double { progress?.fractionCompleted ?? 0 }
 
@@ -54,6 +55,11 @@ struct UninstallProgressView: View {
                 metric(value: Format.bytes(progress?.bytesRemoved ?? 0), label: "Removed")
                 metric(value: Format.eta(progress?.estimatedTimeRemaining), label: "Remaining")
             }
+
+            Button("Cancel", action: onCancel)
+                .controlSize(.large)
+                .padding(.top, 12)
+                .keyboardShortcut(.cancelAction)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(40)

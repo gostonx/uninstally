@@ -82,10 +82,10 @@ final class AppCoordinator {
         handleFinderSelection(bundleURLs: SelectionReceiver.appBundleURLs(from: url))
     }
 
-    /// Handles one or more `.app` bundles selected in Finder. A single app goes
-    /// straight into its simulation; multiple apps present a chooser.
+    /// Handles one or more supported bundles selected in Finder. A single item goes
+    /// straight into its simulation; multiple items present a chooser.
     func handleFinderSelection(bundleURLs: [URL]) {
-        let appURLs = bundleURLs.filter { $0.pathExtension == "app" }
+        let appURLs = bundleURLs.filter { LibraryPaths.isSupportedBundle($0) }
         guard !appURLs.isEmpty else {
             Logger.app.error("Ignoring Finder selection with no app bundles.")
             return

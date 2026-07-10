@@ -28,7 +28,7 @@ struct UninstallSimulationManager {
         }
 
         onProgress("Calculating storage\u{2026}")
-        var result = SimulationResult(app: app, items: validatedItems, rejectedCount: plan.rejected.count)
+        let result = SimulationResult(app: app, items: validatedItems, rejectedCount: plan.rejected.count)
         result.safetyScore = SafetyScore(from: plan)
         return result
     }

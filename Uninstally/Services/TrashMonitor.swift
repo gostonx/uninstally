@@ -8,13 +8,14 @@ extension Notification.Name {
     static let trashMonitorPreferenceChanged = Notification.Name("trashMonitorPreferenceChanged")
 }
 
-/// Watches the user's Trash and, when a `.app` bundle appears there (e.g. dragged
-/// in from Finder), offers to remove the application's leftover files.
+/// Watches the user's Trash and, when a supported bundle (`.app`, `.component`,
+/// `.vst`, `.vst3`, `.aaxplugin`, `.clap`) appears there, offers to remove the
+/// application's or plug-in's leftover files.
 ///
 /// Uses a `DispatchSource` file-system-object observer on the Trash directory —
 /// event-driven, so it consumes virtually no CPU while idle (no polling). New
-/// applications are detected only *after* the move completes (debounced), and each
-/// app is reported once (duplicate events are ignored).
+/// bundles are detected only *after* the move completes (debounced), and each
+/// is reported once (duplicate events are ignored).
 ///
 /// Independent of the uninstall engine: it only detects and notifies.
 @MainActor
@@ -23,8 +24,9 @@ final class TrashMonitor {
     private var source: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
     private var debounceTask: Task<Void, Never>?
-    /// `.app` paths already present/handled, so only genuinely new ones notify.
-    private var seenAppPaths: Set<String> = []
+    /// Supported bundle paths already present/handled, so only genuinely new ones
+    /// notify.
+    private var seenBundlePaths: Set<String> = []
 
     private let trashURL: URL? = try? FileManager.default.url(
         for: .trashDirectory, in: .userDomainMask, appropriateFor: nil, create: false
@@ -47,8 +49,8 @@ final class TrashMonitor {
         }
         fileDescriptor = fd
 
-        // Seed with what's already there so we only react to newly-added apps.
-        seenAppPaths = currentAppPaths()
+        // Seed with what's already there so we only react to newly-added bundles.
+        seenBundlePaths = currentBundlePaths()
 
         let src = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd, eventMask: [.write, .rename, .delete], queue: .main
@@ -81,22 +83,22 @@ final class TrashMonitor {
         debounceTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(900))
             guard !Task.isCancelled else { return }
-            self?.detectNewApps()
+            self?.detectNewBundles()
         }
     }
 
-    private func currentAppPaths() -> Set<String> {
+    private func currentBundlePaths() -> Set<String> {
         guard let trashURL,
               let entries = try? FileManager.default.contentsOfDirectory(
                   at: trashURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
               ) else { return [] }
-        return Set(entries.filter { $0.pathExtension == "app" }.map(\.standardizedFileURL.path))
+        return Set(entries.filter { LibraryPaths.isSupportedBundle($0) }.map(\.standardizedFileURL.path))
     }
 
-    private func detectNewApps() {
-        let current = currentAppPaths()
-        let newlyAdded = current.subtracting(seenAppPaths)
-        seenAppPaths = current
+    private func detectNewBundles() {
+        let current = currentBundlePaths()
+        let newlyAdded = current.subtracting(seenBundlePaths)
+        seenBundlePaths = current
         guard !newlyAdded.isEmpty else { return }
 
         // Inspect off the main actor (size calculation can be heavy), then notify.
@@ -104,13 +106,13 @@ final class TrashMonitor {
         for path in newlyAdded {
             Task.detached { [weak self] in
                 guard let app = scanner.inspect(bundleURL: URL(fileURLWithPath: path)) else { return }
-                await self?.report(app)
+                await self?.notify(app)
             }
         }
     }
 
-    private func report(_ app: AppInfo) {
-        Logger.app.log("TrashMonitor: detected \(app.name, privacy: .public) in Trash")
-        NotificationService.shared.postTrashLeftovers(appName: app.name, appURL: app.url)
+    private func notify(_ bundle: AppInfo) {
+        Logger.app.log("TrashMonitor: detected \(bundle.name, privacy: .public) in Trash")
+        NotificationService.shared.postTrashLeftovers(appName: bundle.name, appURL: bundle.url)
     }
 }

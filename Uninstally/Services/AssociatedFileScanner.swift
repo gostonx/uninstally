@@ -37,6 +37,7 @@ struct AssociatedFileScanner: Sendable {
 
             var results: [RemovableItem] = []
             for await batch in group {
+                if Task.isCancelled { break }
                 results.append(contentsOf: batch)
             }
 
@@ -56,7 +57,7 @@ struct AssociatedFileScanner: Sendable {
             url: app.url,
             sizeBytes: app.sizeBytes,
             requiresAdmin: FileSystemUtil.requiresElevatedPrivileges(for: app.url),
-            matchReason: "The application bundle"
+            matchReason: app.isPlugin ? "The audio plug-in bundle" : "The application bundle"
         )
     }
 
@@ -80,6 +81,8 @@ struct AssociatedFileScanner: Sendable {
         var items: [RemovableItem] = []
 
         for child in children {
+            if Task.isCancelled { return items }
+
             let name = child.lastPathComponent
             var reason: String?
 
@@ -118,6 +121,7 @@ struct AssociatedFileScanner: Sendable {
                 at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
             ) else { continue }
             for child in children {
+                if Task.isCancelled { return items }
                 let name = child.lastPathComponent
                 guard containsIdentifier(name, app: app) else { continue }
                 items.append(RemovableItem(

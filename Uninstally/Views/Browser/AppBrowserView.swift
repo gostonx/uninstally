@@ -252,7 +252,7 @@ struct AppBrowserView: View {
     }
 
     private func handleDrop(_ urls: [URL]) -> Bool {
-        guard let bundle = urls.first(where: { $0.pathExtension == "app" }),
+        guard let bundle = urls.first(where: { LibraryPaths.isSupportedBundle($0) }),
               let app = ApplicationScanner().inspect(bundleURL: bundle) else { return false }
         coordinator.startUninstall(for: app)
         return true

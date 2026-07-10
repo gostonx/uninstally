@@ -11,15 +11,21 @@ struct UninstallView: View {
         ZStack {
             switch model.phase {
             case .scanning:
-                ScanningView(app: model.app, step: model.scanStep)
+                ScanningView(app: model.app, step: model.scanStep, onCancel: {
+                    model.cancelScan()
+                    cancel()
+                })
             case .review, .confirming:
                 UninstallSimulationView(
                     model: model,
                     onCancel: cancel,
-                    onProceed: { Task { await model.proceed() } }
+                    onProceed: { model.startProceed() }
                 )
             case .uninstalling:
-                UninstallProgressView(app: model.app, progress: model.progress)
+                UninstallProgressView(app: model.app, progress: model.progress, onCancel: {
+                    model.cancelUninstall()
+                    cancel()
+                })
             case .finished:
                 if let result = model.result {
                     CompletionView(result: result, isDedicated: model.isDedicatedSession) {
@@ -33,14 +39,15 @@ struct UninstallView: View {
                     app: model.app,
                     summary: model.securitySummary,
                     onCancel: { model.cancelConfirmation() },
-                    onConfirm: { Task { await model.uninstall() } }
+                    onConfirm: { model.startUninstall() }
                 )
                 .transition(.opacity)
                 .zIndex(10)
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.phase)
-        .task { await model.scan() }
+        .task { model.startScan() }
+        .onDisappear { model.cancelScan() }
         .onChange(of: model.phase) { _, phase in
             if phase == .finished {
                 if let result = model.result {
@@ -73,6 +80,7 @@ struct UninstallView: View {
 struct ScanningView: View {
     let app: AppInfo
     var step: String = "Preparing…"
+    var onCancel: () -> Void = {}
     @State private var pulse = false
 
     var body: some View {
@@ -90,6 +98,10 @@ struct ScanningView: View {
             }
             ProgressView()
                 .controlSize(.large)
+            Button("Cancel", action: onCancel)
+                .controlSize(.large)
+                .padding(.top, 12)
+                .keyboardShortcut(.cancelAction)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { pulse = true }

@@ -1,7 +1,7 @@
 import Foundation
 
-/// A discovered, installed macOS application together with the metadata Uninstally
-/// needs to display it and to drive the associated-file scan.
+/// A discovered, installed macOS application or audio plug-in together with the
+/// metadata Uninstally needs to display it and to drive the associated-file scan.
 ///
 /// `AppInfo` is a value type so it can be moved freely across concurrency domains.
 /// Icons are loaded lazily and separately (see `IconLoader`) to keep this type
@@ -10,7 +10,8 @@ struct AppInfo: Identifiable, Hashable, Sendable {
     /// Stable identity derived from the on-disk location.
     var id: String { url.path }
 
-    /// Absolute location of the `.app` bundle.
+    /// Absolute location of the bundle (`.app`, `.component`, `.vst`, `.vst3`,
+    /// `.aaxplugin`, `.clap`).
     let url: URL
 
     /// Localised display name (falls back to the file name without extension).
@@ -61,6 +62,23 @@ struct AppInfo: Identifiable, Hashable, Sendable {
         if buildVersion.isEmpty || buildVersion == version { return version }
         if version.isEmpty { return buildVersion }
         return "\(version) (\(buildVersion))"
+    }
+
+    /// `true` when this is an audio plug-in bundle rather than a regular `.app`.
+    var isPlugin: Bool {
+        url.pathExtension != "app"
+    }
+
+    /// Human-readable plug-in format name, or `nil` for `.app` bundles.
+    var pluginFormat: String? {
+        switch url.pathExtension {
+        case "component": return "AU"
+        case "vst": return "VST"
+        case "vst3": return "VST3"
+        case "aaxplugin": return "AAX"
+        case "clap": return "CLAP"
+        default: return nil
+        }
     }
 
     var location: String {

@@ -31,6 +31,13 @@ struct AppGridCell: View {
                     .font(.callout.weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                if let format = app.pluginFormat {
+                    Text(format)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(.quaternary, in: Capsule())
+                }
                 Text(Format.bytes(app.sizeBytes))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -87,6 +94,13 @@ struct AppListRow: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(app.name).font(.body.weight(.medium))
                 HStack(spacing: 6) {
+                    if let format = app.pluginFormat {
+                        Text(format)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(.quaternary, in: Capsule())
+                    }
                     if !app.developer.isEmpty {
                         Text(app.developer)
                     }
@@ -140,7 +154,7 @@ struct AppContextMenu: View {
     var collectionID: UUID?
 
     var body: some View {
-        Button("Uninstall…", systemImage: "trash") {
+        Button(app.isPlugin ? "Uninstall Plugin…" : "Uninstall…", systemImage: "trash") {
             coordinator.startUninstall(for: app)
         }
         Divider()

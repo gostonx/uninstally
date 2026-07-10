@@ -37,7 +37,7 @@ final class SimulationResult {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .application: return "Application"
+            case .application: return "Main Bundle"
             case .support: return "Support Files"
             case .caches: return "Caches"
             case .preferences: return "Preferences"
