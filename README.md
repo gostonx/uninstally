@@ -25,7 +25,9 @@ Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and the
 brew install --cask uninstally
 ```
 
-If the tap is not yet trusted, Homebrew will ask you to trust it. Run `brew trust gostonx/tap` to proceed. This is standard behavior for any third-party tap and only needs to be done once.
+Homebrew will ask you to trust the `gostonx/tap` tap the first time — this is standard for any third-party tap. A single `brew trust gostonx/tap` resolves it permanently.
+
+> **Note:** Homebrew's tap trust is system-wide. If you see an error about *any* untrusted tap (e.g. `aws/tap`, `homebrew/core`), Homebrew silently blocks **all** brew commands — including `brew install` — until that tap is either trusted or removed. This is not specific to Uninstally. Run `brew untap <name>` to remove the offending tap, or `brew trust <name>` to trust it.
 
 ```sh
 brew upgrade --cask uninstally
@@ -86,8 +88,8 @@ Enable the extension in System Settings → General → Login Items & Extensions
 **Gatekeeper blocks the app?**  
 Right-click the app → Open → confirm. Or clear quarantine: `xattr -dr com.apple.quarantine /Applications/Uninstally.app`
 
-**Homebrew says the tap is untrusted?**  
-Run `brew trust gostonx/tap` once. Homebrew requires this for third-party taps as a security measure.
+**Homebrew says a tap is untrusted?**  
+Homebrew's tap trust is system-wide — if *any* tap on your system is untrusted, brew silently ignores **all** taps, including `gostonx/tap`. It may not even mention our tap in the error. Run `brew untap <offending-tap>` to remove a tap you no longer use, or `brew trust <offending-tap>` to trust it. For Uninstally's tap specifically: `brew trust gostonx/tap`.
 
 **Homebrew packages not showing?**  
 Make sure Homebrew is installed. Relaunch Uninstally after installing Homebrew so it can detect the binary.

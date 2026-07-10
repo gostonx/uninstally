@@ -4,6 +4,48 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.7.2] — 2026-07-10
+
+### Fixed
+- **Native macOS UI materials** — fixed a bug where translucent sidebar, cards,
+  and toolbar would render as opaque blocks (losing the floating native look)
+  when the activation policy changed after window creation. The preference is
+  now applied before the window is drawn, preserving the correct compositing
+  regardless of Dock icon preference.
+
+## [1.7.1] — 2026-07-10
+
+### Fixed
+- **Duplicate apps** — the boot volume was being scanned twice because APFS
+  firmlinks aren't resolved by `URL.standardizedFileURL`. The volume scan now
+  skips the root volume.
+- **Recently Opened wrong** — used `contentModificationDate` as a fallback which
+  conflated app auto-updates with user launches. Now uses LaunchServices
+  `kMDItemLastUsedDate` via Spotlight.
+- **Recently Installed wrong** — used bare `creationDateKey` which reflects the
+  sealed-system-volume binding time. Now uses Spotlight `kMDItemDateAdded`.
+
+### Changed
+- **Dock icon shown by default** — new installs see Uninstally in the Dock.
+  Existing users can toggle this in Settings → General.
+
+## [1.7.0] — 2026-07-10
+
+### Added
+- **Audio plugin support** — detect and uninstall AU (`.component`), VST (`.vst`),
+  VST3 (`.vst3`), AAX (`.aaxplugin`), and CLAP (`.clap`) bundles. Scans standard
+  plugin directories, Finder right-click integration, Trash monitoring, and format
+  badges (AU/VST/VST3/AAX/CLAP) in the browser.
+- **Cancel buttons** on scan and uninstall screens (`⌘.` shortcut) with full task
+  cancellation through the scanner pipeline.
+
+### Fixed
+- **Trash verification** — trash mode now checks items were actually removed
+  before reporting success.
+- **Simulation hang** — replaced `NSDirectoryEnumerator` with `/usr/bin/du -sk`
+  for fast directory sizing on large trees (LLM models, sample libraries).
+- **Size consistency** — standardized to `du -sk` for consistency with other tools.
+
 ## [1.6.0] — 2026-07-09
 
 ### Added

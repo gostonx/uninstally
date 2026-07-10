@@ -29,10 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// here guarantees the correct `Bundle.preferredLocalizations` is set.
     func applicationWillFinishLaunching(_ notification: Notification) {
         LanguageManager.applySavedLanguage()
+        DockIconController.applyStoredPreference()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        DockIconController.applyStoredPreference()
         AppSettings.removeObsoleteDefaults()
         NotificationService.shared.requestAuthorizationIfNeeded()
         trashMonitor.start()
