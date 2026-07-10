@@ -11,6 +11,21 @@ Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and the
   <img src="docs/uninstally-demo.gif" alt="Uninstally demo" width="80%" />
 </p>
 
+## Install
+
+### Homebrew (recommended)
+
+```sh
+brew tap gostonx/tap
+brew install --cask uninstally
+```
+
+```sh
+brew upgrade --cask uninstally
+brew uninstall --cask uninstally
+brew uninstall --cask --zap uninstally
+```
+
 ## Features
 
 - **Remove apps and their leftover files** — caches, preferences, containers, logs, and more
@@ -40,21 +55,6 @@ Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and the
 Dragging an app to the Trash leaves files behind — preferences in `~/Library/Preferences`, caches in `~/Library/Caches`, containers, logs, and saved state scattered across your drive. These files accumulate and waste storage over time.
 
 Uninstally scans for every file linked to an application using its bundle identifier, then lets you review what was found before anything is removed. You stay in control.
-
-## Install
-
-### Homebrew (recommended)
-
-```sh
-brew tap gostonx/tap
-brew install --cask uninstally
-```
-
-```sh
-brew upgrade --cask uninstally
-brew uninstall --cask uninstally
-brew uninstall --cask --zap uninstally
-```
 
 ### Direct download
 
