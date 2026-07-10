@@ -131,9 +131,6 @@ struct UninstallSimulationView: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 14) {
-                Label("This simulation has not deleted any files.", systemImage: "checkmark.shield.fill")
-                    .font(.callout)
-                    .foregroundStyle(.green)
                 Spacer()
                 if let simulation {
                     VStack(alignment: .trailing, spacing: 1) {

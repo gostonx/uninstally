@@ -62,7 +62,6 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, case .browser = coordinator.route,
-               !coordinator.browserModel.apps.isEmpty,
                !coordinator.browserModel.isScanning {
                 Task { await coordinator.browserModel.load() }
             }

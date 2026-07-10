@@ -21,7 +21,7 @@ enum FileSystemUtil {
             guard let enumerator = fm.enumerator(
                 at: url,
                 includingPropertiesForKeys: Array(keys),
-                options: [.skipsHiddenFiles],
+                options: [],
                 errorHandler: { _, _ in true }
             ) else { return 0 }
 

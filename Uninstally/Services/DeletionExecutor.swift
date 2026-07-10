@@ -94,14 +94,16 @@ struct DeletionExecutor: Sendable {
                         var resulting: NSURL?
                         try FileManager.default.trashItem(at: target, resultingItemURL: &resulting)
                         if item.isApplicationBundle { trashedAppURL = resulting as URL? }
-                    case .permanent:
-                        try FileManager.default.removeItem(at: target)
-                    }
-                    if FileManager.default.fileExists(atPath: target.path) {
-                        failures.append(FailedRemoval(path: displayPath, reason: "Item still present after deletion"))
-                    } else {
                         deletedPaths.append(target.path)
                         bytesRemoved += item.sizeBytes
+                    case .permanent:
+                        try FileManager.default.removeItem(at: target)
+                        if !FileManager.default.fileExists(atPath: target.path) {
+                            deletedPaths.append(target.path)
+                            bytesRemoved += item.sizeBytes
+                        } else {
+                            failures.append(FailedRemoval(path: displayPath, reason: "Item still present after deletion"))
+                        }
                     }
                 }
             } catch {

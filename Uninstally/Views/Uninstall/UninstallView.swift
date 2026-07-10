@@ -64,8 +64,7 @@ struct UninstallView: View {
         if model.isDedicatedSession {
             NSApplication.shared.terminate(nil)
         } else {
-            let removedID = FileSystemUtil.exists(model.app.url) ? nil : model.app.id
-            coordinator.finishedUninstall(removed: removedID)
+            coordinator.finishedUninstall(removed: model.app.id)
         }
     }
 }
