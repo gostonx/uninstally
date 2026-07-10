@@ -1,11 +1,10 @@
 # Uninstally
 
 [![Release](https://img.shields.io/github/v/release/gostonx/uninstally)](https://github.com/gostonx/uninstally/releases/latest)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gostonx/uninstally/ci.yml?branch=main)](https://github.com/gostonx/uninstally/actions)
 [![Homebrew Cask](https://img.shields.io/badge/Homebrew-Cask-blue?logo=homebrew)](https://github.com/gostonx/uninstally/releases/latest)
 [![License](https://img.shields.io/github/license/gostonx/uninstally)](LICENSE)
 
-A native macOS uninstaller built with SwiftUI. Remove apps and their leftover files safely — optionally move user files to the Trash, or permanently delete privileged items — with Homebrew support and a Finder right‑click integration.
+Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and their leftover files, manage Homebrew packages, and uninstall directly from Finder with a simple right click.
 
 <p align="center">
   <img src="docs/uninstally-demo.gif" alt="Uninstally demo — uninstalling an app and its leftover files" width="80%" />
