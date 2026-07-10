@@ -5,7 +5,7 @@
 [![Homebrew](https://img.shields.io/badge/Homebrew-Cask-blue?logo=homebrew)](https://github.com/gostonx/uninstally/releases/latest)
 [![License](https://img.shields.io/github/license/gostonx/uninstally)](LICENSE)
 
-Completely remove apps from your Mac — including the caches, preferences, and support files they leave behind. Uninstall from Finder with a right-click, browse all your installed apps, and clean up leftover files from apps you already deleted.
+Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and their leftover files, manage Homebrew packages, and uninstall directly from Finder with a simple right click.
 
 <p align="center">
   <img src="docs/uninstally-demo.gif" alt="Uninstally demo" width="80%" />
