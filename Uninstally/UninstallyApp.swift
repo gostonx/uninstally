@@ -2,10 +2,9 @@ import SwiftUI
 
 /// Uninstally — a native macOS uninstaller by Codenta.
 ///
-/// The app deliberately runs as an *accessory* (no Dock icon, no menu-bar item):
-/// it appears only when launched directly or from Finder. The single
-/// `WindowGroup` hosts either the standalone browser or a dedicated uninstall
-/// flow, decided by the `AppCoordinator`.
+/// The `WindowGroup` hosts either the standalone browser or a dedicated uninstall
+/// flow, decided by the `AppCoordinator`. The Dock icon is shown by default and
+/// can be toggled in Settings → General (changes the activation policy at runtime).
 @main
 struct UninstallyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
