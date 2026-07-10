@@ -24,13 +24,17 @@ enum LibraryPaths {
             home.appending(path: "Applications", directoryHint: .isDirectory),
             URL(fileURLWithPath: "/Applications/Utilities", isDirectory: true),
         ]
-        // External / secondary volumes.
+        // External / secondary volumes — skip the boot volume since /Applications
+        // is already explicitly listed above and firmlinks make both paths refer to
+        // the same directory without standardisedFileURL resolving them.
         if let volumes = try? FileManager.default.contentsOfDirectory(
             at: URL(fileURLWithPath: "/Volumes", isDirectory: true),
-            includingPropertiesForKeys: nil,
+            includingPropertiesForKeys: [.volumeIsRootFileSystemKey],
             options: [.skipsHiddenFiles]
         ) {
             for volume in volumes {
+                let isRoot = (try? volume.resourceValues(forKeys: [.volumeIsRootFileSystemKey]))?.volumeIsRootFileSystem == true
+                if isRoot { continue }
                 let candidate = volume.appending(path: "Applications", directoryHint: .isDirectory)
                 if FileManager.default.fileExists(atPath: candidate.path) {
                     dirs.append(candidate)

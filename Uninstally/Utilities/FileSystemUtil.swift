@@ -1,3 +1,4 @@
+import CoreServices
 import Foundation
 
 /// Low-level file-system helpers shared across the scanning and uninstall engines.
@@ -49,17 +50,29 @@ enum FileSystemUtil {
         return !fm.isWritableFile(atPath: url.deletingLastPathComponent().path)
     }
 
-    /// Creation date of an item, if available.
+    /// Best-effort install date. Prefers Spotlight's `kMDItemDateAdded` (which
+    /// tracks when the item first appeared in its current location) and falls back
+    /// to the file-system creation date.
     static func creationDate(of url: URL) -> Date? {
-        (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
+        if let mdItem = MDItemCreate(nil, url.path as CFString),
+           let date = MDItemCopyAttribute(mdItem, kMDItemDateAdded) as? Date {
+            return date
+        }
+        return (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate
     }
 
-    /// Best-effort "last used" date: LaunchServices content-access date, falling
-    /// back to the modification date.
+    /// Last time the user opened this app, as tracked by LaunchServices via
+    /// Spotlight. Falls back to `contentAccessDate` only if Spotlight is unavailable.
+    ///
+    /// The previous implementation fell back to `contentModificationDate` which
+    /// conflated app auto-updates (Chrome, VS Code, Slack, etc.) with user launches,
+    /// making auto-updating apps perpetually appear under "Recently Opened".
     static func lastUsedDate(of url: URL) -> Date? {
-        let keys: Set<URLResourceKey> = [.contentAccessDateKey, .contentModificationDateKey]
-        let values = try? url.resourceValues(forKeys: keys)
-        return values?.contentAccessDate ?? values?.contentModificationDate
+        if let mdItem = MDItemCreate(nil, url.path as CFString),
+           let date = MDItemCopyAttribute(mdItem, kMDItemLastUsedDate) as? Date {
+            return date
+        }
+        return (try? url.resourceValues(forKeys: [.contentAccessDateKey]))?.contentAccessDate
     }
 
     /// Volume display name for a URL (e.g. "Macintosh HD", "SanDisk").

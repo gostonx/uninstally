@@ -3,8 +3,7 @@ import Foundation
 
 /// Keys for user-facing preferences persisted in `UserDefaults`.
 enum AppSettings {
-    /// Whether Uninstally shows an icon in the Dock. Defaults to `false`, keeping
-    /// the app as a lightweight accessory unless the user opts in.
+    /// Whether Uninstally shows an icon in the Dock. Defaults to `true`.
     static let showDockIconKey = "showDockIcon"
 
     // MARK: Uninstall
@@ -70,9 +69,15 @@ enum AppSettings {
 /// standard app with a Dock icon and menu bar; `.accessory` hides both again.
 @MainActor
 enum DockIconController {
-    /// Reads the stored preference and applies it.
+    /// Reads the stored preference and applies it. When no preference has been
+    /// set the Dock icon is shown by default.
     static func applyStoredPreference() {
-        apply(showDockIcon: UserDefaults.standard.bool(forKey: AppSettings.showDockIconKey))
+        let showDockIcon: Bool = if UserDefaults.standard.object(forKey: AppSettings.showDockIconKey) != nil {
+            UserDefaults.standard.bool(forKey: AppSettings.showDockIconKey)
+        } else {
+            true
+        }
+        apply(showDockIcon: showDockIcon)
     }
 
     /// Applies an explicit value.

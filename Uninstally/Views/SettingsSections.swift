@@ -104,7 +104,7 @@ private struct RowDivider: View {
 // MARK: - Appearance
 
 private struct AppearanceContent: View {
-    @AppStorage(AppSettings.showDockIconKey) private var showDockIcon = false
+    @AppStorage(AppSettings.showDockIconKey) private var showDockIcon = true
 
     var body: some View {
         SettingsCard {
