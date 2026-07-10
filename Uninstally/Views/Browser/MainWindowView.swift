@@ -103,16 +103,6 @@ struct MainWindowView: View {
             }
 
             Section("Tools") {
-                if showStorageInsights {
-                    Label("Storage Insights", systemImage: "chart.pie.fill")
-                        .tag(SidebarItem.storageInsights)
-                        .contextMenu {
-                            Button("Hide from Sidebar", systemImage: "eye.slash") {
-                                if selection == .storageInsights { selection = .filter(.all) }
-                                showStorageInsights = false
-                            }
-                        }
-                }
                 if showRecentlyUninstalled {
                     Label {
                         HStack {
@@ -137,6 +127,16 @@ struct MainWindowView: View {
                             showCustomize = true
                         }
                     }
+                }
+                if showStorageInsights {
+                    Label("Storage Insights", systemImage: "chart.pie.fill")
+                        .tag(SidebarItem.storageInsights)
+                        .contextMenu {
+                            Button("Hide from Sidebar", systemImage: "eye.slash") {
+                                if selection == .storageInsights { selection = .filter(.all) }
+                                showStorageInsights = false
+                            }
+                        }
                 }
                 Label("Leftover Scanner", systemImage: "trash.slash.fill")
                     .tag(SidebarItem.leftovers)

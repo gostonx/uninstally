@@ -82,14 +82,14 @@ struct CustomizeAppSidebarView: View {
                 }
                 Section("Tools") {
                     ToolVisibilityRow(
-                        title: "Storage Insights",
-                        systemImage: "chart.pie.fill",
-                        key: AppSettings.showStorageInsightsKey
-                    )
-                    ToolVisibilityRow(
                         title: "Recently Uninstalled",
                         systemImage: "clock.arrow.circlepath",
                         key: AppSettings.showRecentlyUninstalledKey
+                    )
+                    ToolVisibilityRow(
+                        title: "Storage Insights",
+                        systemImage: "chart.pie.fill",
+                        key: AppSettings.showStorageInsightsKey
                     )
                 }
             }

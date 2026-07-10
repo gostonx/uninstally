@@ -188,12 +188,17 @@ struct AppBrowserView: View {
 
         ToolbarItem(placement: .primaryAction) {
             Menu {
-                Picker("Sort By", selection: Binding(
-                    get: { model.sort },
-                    set: { model.sort = $0 }
-                )) {
-                    ForEach(AppSortOption.allCases) { option in
-                        Label(option.rawValue, systemImage: option.systemImage).tag(option)
+                ForEach(AppSortOption.allCases) { option in
+                    Button {
+                        model.sort = option
+                    } label: {
+                        HStack {
+                            Label(option.rawValue, systemImage: option.systemImage)
+                            if model.sort == option {
+                                Spacer()
+                                Image(systemName: "checkmark")
+                            }
+                        }
                     }
                 }
             } label: {

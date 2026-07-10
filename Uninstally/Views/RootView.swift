@@ -37,6 +37,24 @@ struct RootView: View {
         .sheet(item: inspectorBinding) { app in
             NavigationStack { AppInspectorView(app: app) }
         }
+        .sheet(isPresented: Binding(
+            get: { updateManager.showUpdatePrompt && updateManager.latestVersion != nil },
+            set: { updateManager.showUpdatePrompt = $0 }
+        )) {
+            if case .updateAvailable(let version) = updateManager.status {
+                UpdatePromptView(
+                    version: version,
+                    releaseNotesHTML: updateManager.latestReleaseNotesHTML,
+                    onUpdateNow: {
+                        updateManager.showUpdatePrompt = false
+                        updateManager.checkForUpdates()
+                    },
+                    onLater: {
+                        updateManager.showUpdatePrompt = false
+                    }
+                )
+            }
+        }
         .task {
             if !coordinator.launchedFromFinder {
                 updateManager.checkForUpdatesInBackground()

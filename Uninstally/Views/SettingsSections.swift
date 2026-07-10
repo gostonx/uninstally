@@ -135,13 +135,7 @@ private struct LanguageContent: View {
                         Image(systemName: "globe")
                             .font(.body)
                             .foregroundStyle(Color.accentColor)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(language.nativeName)
-                            if language.code == LanguageManager.supportedLanguages.first?.code {
-                                Text("Source language — translation ready")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
+                        Text(language.nativeName)
                         Spacer(minLength: 8)
                         if manager.current.code == language.code {
                             Image(systemName: "checkmark")

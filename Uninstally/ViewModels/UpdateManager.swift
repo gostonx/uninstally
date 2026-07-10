@@ -69,6 +69,9 @@ final class UpdateManager: NSObject {
     private(set) var latestReleaseDate: String?
     private(set) var latestContentLength: UInt64 = 0
 
+    /// Set true when an update is found — triggers the update prompt sheet.
+    var showUpdatePrompt = false
+
     // MARK: Preferences
 
     var channel: UpdateChannel {
@@ -211,6 +214,7 @@ extension UpdateManager: SPUUpdaterDelegate {
             latestReleaseDate = item.dateString
             latestContentLength = item.contentLength
             status = .updateAvailable(version: item.displayVersionString)
+            showUpdatePrompt = true
             NotificationService.shared.post(
                 title: "Update Available",
                 body: "Uninstally \(item.displayVersionString) is available to download.",
