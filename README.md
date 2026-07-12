@@ -7,9 +7,9 @@
 
 Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and their leftover files, manage Homebrew packages, and uninstall directly from Finder with a simple right click.
 
-🎉🎉 500+ DOWNLOADS ON THE FIRST DAY!! YOU GUYS ARE AMAZING WITH THE SUPPORT AND FEEDBACK 🎉🎉
+🎉 1000+ DOWNLOADS WITHIN 24 HOURS!! YOU GUYS ARE AMAZING WITH THE SUPPORT AND FEEDBACK 🎉
 
-⭐ **If this app helped you, a star means the world. It costs you nothing but tells me making this app was worth it. Thank you!** ⭐
+⭐ **If this app helped you, a **star** means the world. It costs you nothing but tells me making this app was worth it. Thank you!** ⭐
 
 
 
