@@ -22,7 +22,7 @@ Uninstally is a native macOS uninstaller built with SwiftUI. Remove apps and the
 ### Homebrew
 
 ```sh
-brew install --cask uninstally
+brew install --cask gostonx/tap/uninstally
 ```
 
 Homebrew will ask you to trust the `gostonx/tap` tap the first time — this is standard for any third-party tap. A single `brew trust gostonx/tap` resolves it permanently.
