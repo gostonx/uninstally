@@ -1,5 +1,5 @@
 cask "uninstally" do
-  version "1.6.0"
+  version "1.7.3"
   sha256 :no_check
 
   url "https://github.com/gostonx/uninstally/releases/download/v#{version}/Uninstally-#{version}.dmg"
