@@ -4,6 +4,15 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## [1.7.4] — 2026-08-15
+
+### Fixed
+- **Crash after uninstalling apps** — fixed an index-out-of-range crash
+  (`EXC_BREAKPOINT`) that could occur while the installation-source detector was
+  still scanning in the background. The loop now iterates a snapshot and
+  re-locates entries by stable id, so apps removed mid-scan (e.g. right after an
+  uninstall) no longer cause the app to trap.
+
 ## [1.7.3] — 2026-07-10
 
 ### Fixed

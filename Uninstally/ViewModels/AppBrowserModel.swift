@@ -72,13 +72,18 @@ final class AppBrowserModel {
 
     private func detectInstallationSources() async {
         let detector = InstallationSourceDetector()
-        for i in apps.indices {
-            if apps[i].installationSource != .unknown { continue }
+        // Iterate a snapshot: `apps` may shrink while awaiting (an uninstall can
+        // remove entries mid-loop), so stale indices would trap out of range.
+        let pending = apps.filter { $0.installationSource == .unknown }
+        for app in pending {
             let source = await detector.detect(
-                for: apps[i].url,
-                bundleIdentifier: apps[i].bundleIdentifier
+                for: app.url,
+                bundleIdentifier: app.bundleIdentifier
             )
-            apps[i].installationSource = source
+            // Re-locate by stable id; the app may have been uninstalled by now.
+            if let index = apps.firstIndex(where: { $0.id == app.id }) {
+                apps[index].installationSource = source
+            }
         }
     }
 
