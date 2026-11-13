@@ -15,20 +15,20 @@ struct RootView: View {
             case .browser:
                 MainWindowView()
             case .uninstall(let model):
-                UninstallView(model: model)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .opacity
-                    ))
+                // NavigationStack hosts simulation titles/toolbars without inheriting
+                // the browser's searchable NSToolbar (tearing that down mid-IME resign
+                // crashes — see AppCoordinator.leaveSearchableChrome).
+                NavigationStack {
+                    UninstallView(model: model)
+                }
             case .batch(let model):
-                BatchUninstallView(model: model)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                NavigationStack {
+                    BatchUninstallView(model: model)
+                }
             case .finderSelection(let apps):
                 FinderSelectionView(apps: apps)
-                    .transition(.opacity)
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: coordinator.route)
         .frame(minWidth: 720, minHeight: 480)
         .translucentWindowBackground()
         .sheet(isPresented: showOnboarding) {

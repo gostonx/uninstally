@@ -12,6 +12,12 @@ All notable changes to Uninstally are documented here. This project follows
   the UI still looked successful. Uninstally now prompts once for an
   administrator password to remove those items; cancelling or failing marks the
   uninstall incomplete and lists each path with the failure reason.
+- **Crash when opening an app from the browser** — leaving the searchable
+  `NavigationSplitView` for the uninstall flow could race AppKit toolbar KVO
+  teardown (especially with an active input method / focused search field),
+  aborting with `_crashOnException:`. Route changes now resign first responder
+  and swap chrome without animation; uninstall/batch screens host their own
+  `NavigationStack`.
 
 ## [1.7.3] — 2026-07-10
 
