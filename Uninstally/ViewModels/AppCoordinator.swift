@@ -46,11 +46,34 @@ final class AppCoordinator {
     }
 
     func startUninstall(for app: AppInfo, dedicated: Bool = false) {
-        route = .uninstall(UninstallModel(app: app, isDedicatedSession: dedicated))
+        let next = Route.uninstall(UninstallModel(app: app, isDedicatedSession: dedicated))
+        leaveSearchableChrome(then: next)
     }
 
     func startBatch(for apps: [AppInfo]) {
-        route = .batch(BatchUninstallModel(apps: apps))
+        leaveSearchableChrome(then: .batch(BatchUninstallModel(apps: apps)))
+    }
+
+    /// Leaves a `NavigationSplitView` + `.searchable` chrome safely before swapping
+    /// the window's root content.
+    ///
+    /// Replacing that hierarchy while the toolbar search field (and an active input
+    /// method) is still resigning first responder races SwiftUI's
+    /// `updateToolbarIfNeeded` KVO teardown and crashes with
+    /// `-[NSObject removeObserver:forKeyPath:]` → `_crashOnException:`. Common when
+    /// tapping an app found via search (e.g. "App Cleaner & Uninstaller").
+    private func leaveSearchableChrome(then newRoute: Route) {
+        if case .browser = route {
+            NSApp.keyWindow?.endEditing(for: nil)
+            NSApp.keyWindow?.makeFirstResponder(nil)
+            Task { @MainActor in
+                // Let NSSearchField / IMK finish resigning before SwiftUI replaces the toolbar.
+                await Task.yield()
+                route = newRoute
+            }
+        } else {
+            route = newRoute
+        }
     }
 
     func showInspector(for app: AppInfo) {
