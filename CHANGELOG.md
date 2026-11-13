@@ -4,6 +4,16 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## Unreleased
+
+### Fixed
+- **Crash when opening an app from the browser** — leaving the searchable
+  `NavigationSplitView` for the uninstall flow could race AppKit toolbar KVO
+  teardown (especially with an active input method / focused search field),
+  aborting with `_crashOnException:`. Route changes now resign first responder
+  and swap chrome without animation; uninstall/batch screens host their own
+  `NavigationStack`.
+
 ## [1.7.3] — 2026-07-10
 
 ### Fixed
