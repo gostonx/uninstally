@@ -13,6 +13,10 @@ All notable changes to Uninstally are documented here. This project follows
   aborting with `_crashOnException:`. Route changes now resign first responder
   and swap chrome without animation; uninstall/batch screens host their own
   `NavigationStack`.
+- **Crash when refreshing the app list** — background install-source detection
+  kept indexing into `apps` across `await`s; a concurrent refresh replaced the
+  array and triggered `Fatal error: Index out of range`. Detection now keys by
+  app id and aborts when a newer refresh generation supersedes it.
 
 ## [1.7.3] — 2026-07-10
 

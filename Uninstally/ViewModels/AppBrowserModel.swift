@@ -49,12 +49,14 @@ final class AppBrowserModel {
 
     /// Performs the initial (or a refreshed) scan of installed applications.
     func load() async {
+        refreshGeneration += 1
         let generation = refreshGeneration
         isScanning = true
         defer {
             if refreshGeneration == generation { isScanning = false }
         }
         var discovered = await scanner.scan()
+        guard refreshGeneration == generation else { return }
         // Track size changes from previous scan
         let oldSizes = Dictionary(uniqueKeysWithValues: apps.map { ($0.id, $0.sizeBytes) })
         for i in discovered.indices {
@@ -66,25 +68,33 @@ final class AppBrowserModel {
         apps = AppSortOption.name.sorted(discovered)
         computeDuplicates()
         // Leftover detection and source detection run in the background.
-        Task { await self.refreshLeftoverIndex() }
-        Task { await self.detectInstallationSources() }
+        Task { await self.refreshLeftoverIndex(generation: generation) }
+        Task { await self.detectInstallationSources(generation: generation) }
     }
 
-    private func detectInstallationSources() async {
+    /// Resolves `.unknown` install sources without holding array indices across
+    /// `await` points. A refresh replaces `apps`, so indexing by position races
+    /// and can trap with "Index out of range".
+    private func detectInstallationSources(generation: Int) async {
         let detector = InstallationSourceDetector()
-        for i in apps.indices {
-            if apps[i].installationSource != .unknown { continue }
-            let source = await detector.detect(
-                for: apps[i].url,
-                bundleIdentifier: apps[i].bundleIdentifier
-            )
-            apps[i].installationSource = source
+        let pending: [(AppInfo.ID, URL, String)] = apps.compactMap { app in
+            guard app.installationSource == .unknown else { return nil }
+            return (app.id, app.url, app.bundleIdentifier)
+        }
+        for (id, url, bundleIdentifier) in pending {
+            guard refreshGeneration == generation else { return }
+            let source = await detector.detect(for: url, bundleIdentifier: bundleIdentifier)
+            guard refreshGeneration == generation else { return }
+            guard let index = apps.firstIndex(where: { $0.id == id }) else { continue }
+            apps[index].installationSource = source
         }
     }
 
     /// Rebuilds the index of which installed apps still have detectable leftovers.
-    private func refreshLeftoverIndex() async {
-        let leftovers = await leftoverScanner.scan(installedApps: apps)
+    private func refreshLeftoverIndex(generation: Int) async {
+        let snapshot = apps
+        let leftovers = await leftoverScanner.scan(installedApps: snapshot)
+        guard refreshGeneration == generation else { return }
         leftoverIdentifiers = Set(leftovers.map { $0.associatedIdentifier.lowercased() })
     }
 
