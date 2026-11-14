@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Items are discovered by the `AssociatedFileScanner` and presented to the user
 /// for review. Each item tracks whether it requires elevated privileges so the
-/// engine can batch privileged deletions behind a single authorisation prompt.
+/// engine can batch those deletions behind a single administrator password prompt.
 struct RemovableItem: Identifiable, Hashable, Sendable {
     let id = UUID()
 

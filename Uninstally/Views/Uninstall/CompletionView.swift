@@ -25,11 +25,17 @@ struct CompletionView: View {
             }
 
             VStack(spacing: 6) {
-                Text(result.succeeded ? "Successfully Removed" : "Removed with Issues")
+                Text(result.succeeded ? "Successfully Removed" : "Uninstall Incomplete")
                     .font(.title.weight(.semibold))
                 Text(result.appName)
                     .font(.title3)
                     .foregroundStyle(.secondary)
+                if !result.succeeded {
+                    Text("Some items need attention before \(result.appName) is fully removed.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             HStack(spacing: 0) {
@@ -80,20 +86,25 @@ struct CompletionView: View {
 
     private var failureList: some View {
         GlassCard(cornerRadius: 12) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Label("\(result.failures.count) items could not be removed",
                       systemImage: "exclamationmark.triangle")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.orange)
                 ForEach(result.failures) { failure in
-                    Text(failure.path)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(failure.path)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .truncationMode(.middle)
+                        Text(failure.reason)
+                            .font(.caption2)
+                            .foregroundStyle(.orange.opacity(0.9))
+                    }
                 }
             }
-            .frame(maxWidth: 380, alignment: .leading)
+            .frame(maxWidth: 420, alignment: .leading)
         }
     }
 }

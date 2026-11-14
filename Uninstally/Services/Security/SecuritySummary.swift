@@ -57,7 +57,7 @@ struct SecuritySummary: Sendable {
         var list: [Warning] = []
         if adminFileCount > 0 {
             list.append(Warning(
-                text: "\(adminFileCount) item\(adminFileCount == 1 ? "" : "s") require administrator privileges. Uninstally will attempt them and skip any it cannot safely remove — it never runs shell commands.",
+                text: "\(adminFileCount) item\(adminFileCount == 1 ? "" : "s") require administrator privileges. macOS will ask for your password once; cancelling leaves those items installed and the uninstall is marked incomplete.",
                 systemImage: "lock.shield.fill", severity: .caution))
         }
         if sharedCount > 0 {

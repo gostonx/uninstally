@@ -17,12 +17,14 @@ struct UninstallResult: Sendable {
     let removedFileCount: Int
     let duration: TimeInterval
     let failures: [FailedRemoval]
-    /// Items skipped by validation or permission (not counted as failures).
+    /// Items skipped by validation (not counted as failures).
     var skippedCount: Int = 0
     /// When the app bundle was moved to the Trash, its resulting location there —
     /// used to offer "Restore from Trash" in the uninstall history.
     var trashedAppURL: URL?
 
+    /// `false` when any selected artefact could not be removed (including
+    /// cancelled / failed administrator authorization).
     var succeeded: Bool { failures.isEmpty }
 }
 
