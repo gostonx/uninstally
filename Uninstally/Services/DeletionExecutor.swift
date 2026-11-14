@@ -142,9 +142,7 @@ struct DeletionExecutor: Sendable {
         if !Task.isCancelled, !privilegedQueue.isEmpty {
             emit("Waiting for administrator authorization…")
             let urls = privilegedQueue.map(\.canonicalURL)
-            let outcomes = await MainActor.run {
-                PrivilegedDeletion.remove(urls: urls, mode: plan.method)
-            }
+            let outcomes = await PrivilegedDeletion.remove(urls: urls, mode: plan.method)
 
             for item in privilegedQueue {
                 if Task.isCancelled { break }

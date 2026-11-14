@@ -64,11 +64,15 @@ final class AppCoordinator {
     /// tapping an app found via search (e.g. "App Cleaner & Uninstaller").
     private func leaveSearchableChrome(then newRoute: Route) {
         if case .browser = route {
+            // Drop search text first so the toolbar search field tears down cleanly.
+            browserModel.searchText = ""
             NSApp.keyWindow?.endEditing(for: nil)
             NSApp.keyWindow?.makeFirstResponder(nil)
             Task { @MainActor in
-                // Let NSSearchField / IMK finish resigning before SwiftUI replaces the toolbar.
+                // IMK deactivation is synchronous-wait prone; give it a beat before
+                // SwiftUI replaces the searchable NSToolbar.
                 await Task.yield()
+                try? await Task.sleep(for: .milliseconds(80))
                 route = newRoute
             }
         } else {

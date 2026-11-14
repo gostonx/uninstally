@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 
@@ -7,8 +8,9 @@ import os
 /// Implementation notes:
 /// * Only absolute paths that already passed `PathValidator` are written into a
 ///   short-lived script; there is no open-ended shell surface.
-/// * The script is executed via `do shell script … with administrator privileges`
-///   so AppKit shows the standard auth sheet (cancel → error `-128`).
+/// * Authorization runs via `/usr/bin/osascript` (`do shell script … with
+///   administrator privileges`) off the main actor so SwiftUI/AppKit are not
+///   nested inside the auth wait.
 enum PrivilegedDeletion: Sendable {
 
     enum Outcome: Sendable, Equatable {
@@ -19,8 +21,7 @@ enum PrivilegedDeletion: Sendable {
     }
 
     /// Attempts to remove every URL. Returns a per-path outcome. Empty input yields `[:]`.
-    @MainActor
-    static func remove(urls: [URL], mode: DeletionMode) -> [URL: Outcome] {
+    static func remove(urls: [URL], mode: DeletionMode) async -> [URL: Outcome] {
         guard !urls.isEmpty else { return [:] }
 
         var results: [URL: Outcome] = [:]
@@ -34,11 +35,19 @@ enum PrivilegedDeletion: Sendable {
         }
         guard !pending.isEmpty else { return results }
 
+        await MainActor.run {
+            NSApp.keyWindow?.endEditing(for: nil)
+            NSApp.keyWindow?.makeFirstResponder(nil)
+        }
+        // Let any field-editor / IMK teardown finish before the auth sheet.
+        await Task.yield()
+        try? await Task.sleep(for: .milliseconds(50))
+
         do {
             let scriptURL = try writeScript(for: pending, mode: mode)
             defer { try? FileManager.default.removeItem(at: scriptURL) }
 
-            try runAdministratorScript(at: scriptURL)
+            try await runAdministratorScript(at: scriptURL)
 
             for url in pending {
                 if FileManager.default.fileExists(atPath: url.path) {
@@ -113,7 +122,7 @@ enum PrivilegedDeletion: Sendable {
         "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
-    // MARK: - AppleScript auth
+    // MARK: - Authorization
 
     private enum AuthError: Error, Equatable, LocalizedError {
         case cancelled
@@ -127,9 +136,7 @@ enum PrivilegedDeletion: Sendable {
         }
     }
 
-    private static func runAdministratorScript(at scriptURL: URL) throws {
-        // AppleScript `quoted form of` escapes the path; Swift only embeds the
-        // already-absolute temp script location inside a fixed template.
+    private static func runAdministratorScript(at scriptURL: URL) async throws {
         let escapedPath = scriptURL.path
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
@@ -137,21 +144,39 @@ enum PrivilegedDeletion: Sendable {
         do shell script "/bin/bash " & quoted form of "\(escapedPath)" with administrator privileges
         """
 
-        var errorInfo: NSDictionary?
-        guard let appleScript = NSAppleScript(source: source) else {
-            throw AuthError.failed("Could not prepare administrator authorization")
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", source]
+        let stderr = Pipe()
+        process.standardOutput = Pipe()
+        process.standardError = stderr
+
+        do {
+            try process.run()
+        } catch {
+            throw AuthError.failed(error.localizedDescription)
         }
-        _ = appleScript.executeAndReturnError(&errorInfo)
-        if let errorInfo {
-            let code = errorInfo[NSAppleScript.errorNumber] as? Int ?? 0
-            // -128: user cancelled the auth dialog.
-            if code == -128 {
-                throw AuthError.cancelled
-            }
-            let message = (errorInfo[NSAppleScript.errorMessage] as? String)
-                ?? "Administrator authorization failed"
-            Logger.engine.error("Privileged deletion failed (\(code)): \(message, privacy: .public)")
-            throw AuthError.failed(message)
+
+        // Wait without blocking the cooperative thread pool via a continuous spin;
+        // Process doesn't offer async API on older macOS, so poll termination.
+        while process.isRunning {
+            try? await Task.sleep(for: .milliseconds(50))
         }
+
+        let status = process.terminationStatus
+        if status == 0 { return }
+
+        let errData = stderr.fileHandleForReading.readDataToEndOfFile()
+        let errText = String(data: errData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if errText.localizedCaseInsensitiveContains("User canceled")
+            || errText.localizedCaseInsensitiveContains("user cancelled") {
+            throw AuthError.cancelled
+        }
+        let message = errText.isEmpty
+            ? "Administrator authorization failed (status \(status))"
+            : errText
+        Logger.engine.error("Privileged deletion failed (\(status)): \(message, privacy: .public)")
+        throw AuthError.failed(message)
     }
 }
