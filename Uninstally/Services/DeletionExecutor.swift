@@ -8,14 +8,13 @@ enum UninstallEvent: Sendable {
     case finished(UninstallResult)
 }
 
-/// Executes a **validated** `DeletionPlan`, one file at a time, using only native
-/// `FileManager` APIs. There is no shell, no `rm`, no AppleScript, and no batch
-/// deletion — every artefact is independently re-validated, deleted, and verified,
-/// and the whole operation is recorded in the `DeletionLogger`.
+/// Executes a **validated** `DeletionPlan`, one file at a time.
 ///
-/// If a single item fails (permission, missing, still present), it is logged and
-/// the operation continues with the remaining items — one cache file never aborts
-/// the uninstall.
+/// User-writable artefacts use native `FileManager` APIs. Items that require
+/// administrator rights (or fail with a permission error) are batched into a
+/// single macOS authentication dialog via `PrivilegedDeletion`. Authorization
+/// cancel or failure is reported as a visible uninstall failure — never silently
+/// treated as success.
 struct DeletionExecutor: Sendable {
 
     func execute(plan: DeletionPlan) -> AsyncStream<UninstallEvent> {
@@ -46,6 +45,7 @@ struct DeletionExecutor: Sendable {
         var skipped: [DeletionLogEntry.FileOutcome] = []
         var permissionErrors: [DeletionLogEntry.FileOutcome] = []
         var failures: [FailedRemoval] = []
+        var privilegedQueue: [PlannedDeletion] = []
 
         func emit(_ currentPath: String) {
             let fraction = totalBytes > 0
@@ -82,32 +82,40 @@ struct DeletionExecutor: Sendable {
                 target = validated
             }
 
-            // 2. Delete individually with native APIs, then 3. verify.
+            if !FileManager.default.fileExists(atPath: target.path) {
+                deletedPaths.append(target.path)
+                bytesRemoved += item.sizeBytes
+                completed += 1
+                emit(displayPath)
+                continue
+            }
+
+            // Root-owned / system items go through one shared auth prompt.
+            if item.requiresAdmin {
+                privilegedQueue.append(item)
+                continue
+            }
+
+            // 2. Delete with native APIs; permission failures join the privileged batch.
             do {
-                if !FileManager.default.fileExists(atPath: target.path) {
-                    // Already gone — treat as success.
-                    deletedPaths.append(target.path)
-                    bytesRemoved += item.sizeBytes
-                } else {
-                    switch plan.method {
-                    case .trash:
-                        var resulting: NSURL?
-                        try FileManager.default.trashItem(at: target, resultingItemURL: &resulting)
-                        if item.isApplicationBundle { trashedAppURL = resulting as URL? }
-                        if !FileManager.default.fileExists(atPath: target.path) {
-                            deletedPaths.append(target.path)
-                            bytesRemoved += item.sizeBytes
-                        } else {
-                            failures.append(FailedRemoval(path: displayPath, reason: "Item still present after trashing"))
-                        }
-                    case .permanent:
-                        try FileManager.default.removeItem(at: target)
-                        if !FileManager.default.fileExists(atPath: target.path) {
-                            deletedPaths.append(target.path)
-                            bytesRemoved += item.sizeBytes
-                        } else {
-                            failures.append(FailedRemoval(path: displayPath, reason: "Item still present after deletion"))
-                        }
+                switch plan.method {
+                case .trash:
+                    var resulting: NSURL?
+                    try FileManager.default.trashItem(at: target, resultingItemURL: &resulting)
+                    if item.isApplicationBundle { trashedAppURL = resulting as URL? }
+                    if !FileManager.default.fileExists(atPath: target.path) {
+                        deletedPaths.append(target.path)
+                        bytesRemoved += item.sizeBytes
+                    } else {
+                        failures.append(FailedRemoval(path: displayPath, reason: "Item still present after trashing"))
+                    }
+                case .permanent:
+                    try FileManager.default.removeItem(at: target)
+                    if !FileManager.default.fileExists(atPath: target.path) {
+                        deletedPaths.append(target.path)
+                        bytesRemoved += item.sizeBytes
+                    } else {
+                        failures.append(FailedRemoval(path: displayPath, reason: "Item still present after deletion"))
                     }
                 }
             } catch {
@@ -116,16 +124,56 @@ struct DeletionExecutor: Sendable {
                     deletedPaths.append(target.path)
                     bytesRemoved += item.sizeBytes
                 } else if isPermissionError(nsError) {
-                    permissionErrors.append(.init(path: displayPath, reason: "Requires administrator privileges"))
+                    privilegedQueue.append(item)
                 } else {
                     failures.append(FailedRemoval(path: displayPath, reason: error.localizedDescription))
                     Logger.engine.error("Failed to remove \(target.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
                 }
             }
 
-            completed += 1
-            emit(displayPath)
+            if !privilegedQueue.contains(where: { $0.id == item.id }) {
+                completed += 1
+                emit(displayPath)
+            }
             await Task.yield()
+        }
+
+        // 3. One administrator prompt for every remaining privileged path.
+        if !Task.isCancelled, !privilegedQueue.isEmpty {
+            emit("Waiting for administrator authorization…")
+            let urls = privilegedQueue.map(\.canonicalURL)
+            let outcomes = await MainActor.run {
+                PrivilegedDeletion.remove(urls: urls, mode: plan.method)
+            }
+
+            for item in privilegedQueue {
+                if Task.isCancelled { break }
+                let displayPath = item.canonicalURL.path
+                emit(displayPath)
+
+                switch outcomes[item.canonicalURL] ?? .failed("No privileged result") {
+                case .removed, .alreadyGone:
+                    deletedPaths.append(displayPath)
+                    bytesRemoved += item.sizeBytes
+                    if item.isApplicationBundle, plan.method == .trash {
+                        trashedAppURL = trashedAppURL
+                            ?? FileManager.default.homeDirectoryForCurrentUser
+                                .appending(path: ".Trash/\(item.canonicalURL.lastPathComponent)")
+                    }
+                case .cancelled:
+                    let reason = "Administrator authorization was cancelled"
+                    permissionErrors.append(.init(path: displayPath, reason: reason))
+                    failures.append(FailedRemoval(path: displayPath, reason: reason))
+                case .failed(let reason):
+                    permissionErrors.append(.init(path: displayPath, reason: reason))
+                    failures.append(FailedRemoval(path: displayPath, reason: reason))
+                    Logger.engine.error("Privileged removal failed for \(displayPath, privacy: .public): \(reason, privacy: .public)")
+                }
+
+                completed += 1
+                emit(displayPath)
+                await Task.yield()
+            }
         }
 
         let result = UninstallResult(
@@ -134,11 +182,10 @@ struct DeletionExecutor: Sendable {
             removedFileCount: deletedPaths.count,
             duration: Date().timeIntervalSince(start),
             failures: failures,
-            skippedCount: skipped.count + permissionErrors.count,
+            skippedCount: skipped.count,
             trashedAppURL: trashedAppURL
         )
 
-        // Structured, exportable log.
         await DeletionLogger.shared.record(DeletionLogEntry(
             timestamp: start,
             appName: plan.app.name,
@@ -152,7 +199,6 @@ struct DeletionExecutor: Sendable {
             success: failures.isEmpty && permissionErrors.isEmpty
         ))
 
-        // Nudge Finder so removed items disappear from open windows.
         let changedDirs = Set(items.map { $0.canonicalURL.deletingLastPathComponent().path })
         await MainActor.run {
             for dir in changedDirs { NSWorkspace.shared.noteFileSystemChanged(dir) }
@@ -169,7 +215,6 @@ struct DeletionExecutor: Sendable {
         if error.domain == NSPOSIXErrorDomain, [1 /* EPERM */, 13 /* EACCES */].contains(error.code) {
             return true
         }
-        // Unwrap an underlying POSIX error, if any.
         if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
             return isPermissionError(underlying)
         }

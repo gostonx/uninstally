@@ -4,6 +4,15 @@ All notable changes to Uninstally are documented here. This project follows
 [Semantic Versioning](https://semver.org/) and its releases are published on the
 [Releases page](https://github.com/gostonx/uninstally/releases).
 
+## Unreleased
+
+### Fixed
+- **Root-owned apps left behind after uninstall** — packages like Accio
+  (`root:wheel` under `/Applications`) were skipped on permission errors while
+  the UI still looked successful. Uninstally now prompts once for an
+  administrator password to remove those items; cancelling or failing marks the
+  uninstall incomplete and lists each path with the failure reason.
+
 ## [1.7.3] — 2026-07-10
 
 ### Fixed

@@ -69,6 +69,8 @@
 	<false/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Uninstally uses Apple Events to request administrator authorization when removing apps installed with elevated privileges.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Codenta. All rights reserved.</string>
 	<key>NSPrincipalClass</key>
